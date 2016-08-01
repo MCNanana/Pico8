@@ -10,8 +10,7 @@ function _init()
 	yt=32
 	bufcolor={}
 	--rotation
-	scale=1
-	angle=1
+	t,scale,angle=0,1,1
 	-- text
 	local color=0
 	for j=0,128  do
@@ -62,7 +61,7 @@ end
 function _draw()
  cls()
  draw_rotation()
- draw_starfield()
+ --draw_starfield()
  draw_text()
  if(menu==1) showmenu()
 
@@ -77,8 +76,9 @@ end
 -- rotation
 function update_rotation()
 	ca,sa=cos(angle),sin(angle)
-	scale+=0.1
-	angle-=0.01
+	t+=0.001
+	scale=abs(cos(t*1.3))*5+1
+	angle-=0.005
 end
 
 function draw_rotation()
@@ -101,7 +101,7 @@ function draw_text()
 	local xtmp=xt
 	for j=0,7  do
 		for i=0,48-sx do
-			local col=sget(sx+i,8+j)
+			local col=sget(i,8+j)
 			if (col!=0) then
 				spr(0,xt,yt)
 				--pset(x,y,bufcolor[x+y*128])
@@ -112,14 +112,14 @@ function draw_text()
 		xt=xtmp
 	end
 	xt-=1
- if(xt<0) then
+ --[[if(xt<0) then
  	xt=0
  	sx+=1
  	if(sx>50) then 
  		sx=0
 			xt=128
 		end
-	end
+	end]]
 	yt=32
 	print(xt)
 	print(sx)
