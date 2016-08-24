@@ -10,17 +10,12 @@ function make_expl()
 	expl={}
 	expl.x=rnd(128)
 	expl.y=rnd(128)
-	expl.r=8
+	expl.r=8+rnd(3)-2
 	expl.c=10
-	expl.a=4
-	expl.t=time()
 	return expl
 end
 
 explobj={}
-add(explobj,make_expl())
-add(explobj,make_expl())
-add(explobj,make_expl())
 add(explobj,make_expl())
 
 x=100
@@ -33,6 +28,7 @@ function _update()
 	if(xx<0) xx=120
 
 	foreach(explobj, update_expl)
+	add(explobj,make_expl())
 end
 
 function _draw()
@@ -44,29 +40,31 @@ function _draw()
 	pal(11,10)]]
 	shakecamera()
 	foreach(explobj, draw_expl)
-	--[[if(time()-ltime>2)then
-		ltime=time()
-		explosion()
+	print(#explobj,2,10,3)
+--[[	for i=1,#explobj do
+		if(explobj[i].r=0) del(explobj
 	end]]
 end
 
-function draw_expl(o)
-		if(o.a>2)then
-			circfill(o.x,o.y,o.r,o.c)
-		elseif(o.a==2)then
-			circfill(o.x,o.y,o.r/2,o.c-1)
-		elseif(o.a==1)then
-			circfill(o.x,o.y,o.r/3,4)
-		end		
-end
-
 function update_expl(o)
-	if(o.a>0)then
+	if(o.r>0)then
+		o.r-=0.5
+		if(o.r<2)then o.c=8
+		elseif(o.r<4)then o.c=9
+		end
+	else
+		del(explobj,o)
+	end
+	--[[if(o.a>0)then
 		if(time()-o.t>0.2)then
 		 o.a-=1
 		 o.t=time()
 		end		 
-	end
+	end]]
+end
+
+function draw_expl(o)
+	circfill(o.x,o.y,o.r,o.c)
 end
 
 function shakecamera()
