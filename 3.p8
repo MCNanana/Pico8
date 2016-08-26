@@ -1,6 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
+t=0
 obj={}
 hero={}
 intr=false
@@ -12,7 +13,9 @@ function _init()
 end
 
 function _update()
+	t+=1
 	update_hero()
+	foreach(obj,update_obj)
 	for i=1,#obj do
 		if(intersect(obj[i],hero)) then
 			obj[i].i=true
@@ -38,6 +41,8 @@ function _draw()
 	draw_hero()
 	foreach(obj,draw_obj)
 	if(intr) print(#obj)
+	print(t)
+	print(p)
 end
 
 function make_hero()
@@ -72,9 +77,10 @@ function make_obj()
 end
 
 function update_obj(o)
-	o.x+=rnd(4)-1
-	o.y+=rnd(4)-1
-	if(o.x<1) o.x=1
+	o.x-=1
+	p=40+cos(t/50)*8
+	o.y=p
+	if(o.x<1) o.x=128
 	if(o.x>120) o.x=120
 	if(o.y<1) o.y=1
 	if(o.y>120) o.y=120
