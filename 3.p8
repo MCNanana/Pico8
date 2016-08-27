@@ -4,6 +4,7 @@ __lua__
 t=0
 obj={}
 hero={}
+textobj={}
 intr=false
 
 function _init()
@@ -17,9 +18,11 @@ function _update()
 	update_hero()
 	foreach(obj,update_obj)
 	for i=1,#obj do
-		if(intersect(obj[i],hero)) then
+		if((intersect(obj[i],hero))
+				and(obj[i].i==false))then
 			obj[i].i=true
 			hero.i=true
+			add(textobj,make_textobj("50",obj[i].x,obj[i].y))
 			intr=true
 		end
 	end
@@ -33,6 +36,7 @@ function _update()
 		end
 	end
 	foreach(obj,update_obj)]]
+	foreach(textobj,update_textobj)
 end
 
 function _draw()
@@ -42,7 +46,7 @@ function _draw()
 	foreach(obj,draw_obj)
 	if(intr) print(#obj)
 	print(t)
-	print(p)
+	foreach(textobj,draw_textobj)
 end
 
 function make_hero()
@@ -78,9 +82,11 @@ end
 
 function update_obj(o)
 	o.x-=1
-	p=40+cos(t/50)*8
-	o.y=p
-	if(o.x<1) o.x=128
+	o.y=40+cos(t/50)*9
+	if(o.x<1)then
+		o.x=128
+		o.i=false
+	end
 	if(o.x>120) o.x=120
 	if(o.y<1) o.y=1
 	if(o.y>120) o.y=120
@@ -91,9 +97,27 @@ function draw_obj(o)
 	circfill(o.x,o.y,6,o.c)
 end
 
+function make_textobj(text,x,y)
+	o={}
+	o.x=x
+	o.y=y
+	o.text=text
+	o.c=7
+	return o
+end
+
+function update_textobj(o)
+	if((t%4)==0) o.c+=1
+	if(o.c>10) del(textobj,o)
+end
+
+function draw_textobj(o)
+	print(o.text,o.x,o.y,o.c)	
+end
+
 function intersect(a,b)
-  return (abs(a.x-b.x)*2<(a.width+b.width))and
-         (abs(a.y-b.y)*2<(a.height+b.height));
+	return (abs(a.x-b.x)*2<(a.width+b.width))and
+        (abs(a.y-b.y)*2<(a.height+b.height));
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
