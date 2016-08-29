@@ -89,7 +89,7 @@ end
 -----------
 -- intro --
 function intro()
-	if(((t%50)==0)or((t%51)==0))then
+	if(((t%40)==0)or((t%44)==0))then
 	 pal(11,8)
 	 pal(7,8)
 	else
@@ -97,16 +97,23 @@ function intro()
 		pal(7,5)
 	end
 	
-	local l=128+camx
-	for i=0,60 do
+	local elimit=(128+camx)/8
+	local animlimit=80-elimit
+	for i=0,animlimit do
 		spr(32,i*8,80)
 	end
- if(t>150)then
+	if(animlimit>43) spr(33,animlimit*8,80)
+ if(t>170)then
+ 	hero.x+=8
+ elseif(t>140)then
   camx+=4
+  hero.x+=4
  elseif(t>100)then
   camx+=2
+  hero.x+=2
 	elseif(t>50)then
   camx+=1
+  hero.x+=1
 	end	
 	camera(camx,camy)
 	
