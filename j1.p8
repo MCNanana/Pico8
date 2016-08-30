@@ -36,14 +36,14 @@ function _draw()
 
 	intro_lvl1()
 	-- border
-	pal()
+	--pal()
 	rectfill(camx,0,camx+128,uborder,5)
 	rectfill(camx,128-bborder,camx+128,128,5)
 	print("score "..score,camx+80,3,7)
 	-- debug
 	print("mem "..stat(0),camx+2,1,7)
 	print("cpu "..stat(1),camx+2,7,7)
-	print("camx "..camx,camx+2,13,7)
+	print(fade==true,camx+2,13,7)
 end
 
 ----------
@@ -74,6 +74,7 @@ function update_hero()
 	 hero.shoot=t
 	 add(hero.missiles,make_missile(hero.x+4,hero.y-4))
 	end
+	if(btn(5)) fade=true
 	foreach(hero.missiles,function(m) 
 		m.x+=2
 		if(m.x>127) del(hero.missiles,m)
@@ -103,7 +104,7 @@ function intro_lvl1()
 		offset=1+i*8
 		if((offset>camx)and(offset<camx+128))	spr(32,offset,80)
 	end
-	for i=0,10 do
+	--[[for i=0,10 do
 		spr(64,1+i*8,64)
 		spr(80,1+i*8,72)
 	end
@@ -120,8 +121,17 @@ function intro_lvl1()
   camx+=1
   hero.x+=1
 	end	
-	camera(camx,camy)
-	--map(0,0,0,100,4,1)
+	camera(camx,camy)]]
+	if(fade)then
+		local fe=false
+		while(fe==false)do
+			for i=1,15 do
+			--fadeout(i,0,50)
+				local e=i-i/50
+				pal(i,e,1)
+			end
+		end
+	end
 end
 
 -----------
@@ -129,6 +139,11 @@ end
 function intersection(a,b)
 	return (abs(a.x-b.x)*2<(a.width+b.width))and
         (abs(a.y-b.y)*2<(a.height+b.height));
+end
+
+function fadeout(pi,pe,pf)
+	pi+=((pe-pi)/pf)
+	pal(pi,pe,1)
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
