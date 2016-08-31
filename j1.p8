@@ -2,21 +2,30 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 t=0
-level=0
+level="st"
 score=0
 
 camx,camy=0,0
 uborder=10
 bborder=10
+palarray={}
 
+explosions={}
 enemies={}
 hero={}
 textobj={}
+--rotation
+tr,scale,angle=0,1,1
 
 ----------
 -- init --
 function _init()
+	for i=0,15 do
+		palarray[i]=i
+	end
 	make_hero()
+	
+	level="l1"
 end
 
 ------------
@@ -25,6 +34,11 @@ function _update()
 	t+=1
 	score+=1
 	update_hero()
+
+	if(level=="il1")	update_intro_lvl1()
+ if(level=="l1") update_lvl1()
+ 	
+ foreach(explosions,update_expl)
 end
 
 ----------
@@ -32,18 +46,19 @@ end
 function _draw()
 	cls()
 	pal()
-	draw_hero()
-
-	intro_lvl1()
 	-- border
-	--pal()
 	rectfill(camx,0,camx+128,uborder,5)
 	rectfill(camx,128-bborder,camx+128,128,5)
 	print("score "..score,camx+80,3,7)
 	-- debug
 	print("mem "..stat(0),camx+2,1,7)
 	print("cpu "..stat(1),camx+2,7,7)
-	print(fade==true,camx+2,13,7)
+	print(scale,camx+2,13,7)
+
+	draw_hero()
+
+	if(level=="il1")	draw_intro_lvl1()
+	if(level=="l1") draw_lvl1()
 end
 
 ----------
@@ -88,29 +103,38 @@ function draw_hero()
 	end)
 end
 
+----------------
+-- explosions --
+function make_expl(x,y,r)
+	expl={}
+	expl.x=x
+	expl.y=y
+	expl.r=r--8+rnd(3)-2
+	expl.c=10
+	return expl
+end
+
+function update_expl(o)
+	if(o.r>0)then
+		o.r-=0.5
+		if(o.r<2)then o.c=8
+		elseif(o.r<4)then o.c=9
+		end
+	else
+		del(explosions,o)
+	end
+end
+
+function draw_expl(o)
+	circfill(o.x,o.y,o.r,o.c)
+end
+
 ---------------
 -- intro_lvl --
-function intro_lvl1()
-	if(((t%40)==0)or((t%44)==0))then
-	 pal(11,8)
-	 pal(7,8)
-	else
-		palt(11,true)
-		pal(7,5)
-	end
-	
-	local offset
-	for i=0,38 do
-		offset=1+i*8
-		if((offset>camx)and(offset<camx+128))	spr(32,offset,80)
-	end
-	--[[for i=0,10 do
-		spr(64,1+i*8,64)
-		spr(80,1+i*8,72)
-	end
-	if(camx+64>249) spr(33,313,80)
+function update_intro_lvl1()
 	if(t>160)then
  	hero.x+=8
+ 	if(t%4==0) add(explosions,make_expl(290-rnd(14),80-rnd(8),10+rnd(4)-3))
  elseif(t>120)then
   camx+=4
   hero.x+=3.9
@@ -120,18 +144,38 @@ function intro_lvl1()
 	elseif(t>50)then
   camx+=1
   hero.x+=1
-	end	
-	camera(camx,camy)]]
-	if(fade)then
-		local fe=false
-		while(fe==false)do
-			for i=1,15 do
-			--fadeout(i,0,50)
-				local e=i-i/50
-				pal(i,e,1)
-			end
-		end
 	end
+end
+
+function draw_intro_lvl1()
+	if(((t%40)==0)or((t%44)==0))then
+	 pal(11,8)
+	 pal(7,8)
+	else
+		palt(11,true)
+		pal(7,5)
+	end
+	local offset
+	for i=0,38 do
+		offset=1+i*8
+		if((offset>camx)and(offset<camx+128))	spr(32,offset,80)
+	end
+	for i=0,10 do
+		spr(64,1+i*8,64)
+		spr(80,1+i*8,72)
+	end
+	if(camx+64>249) spr(33,313,80)
+ if(t>200) fadeout()
+	if(t>160) foreach(explosions,draw_expl)	
+	camera(camx,camy)
+end
+
+function update_lvl1()
+	--update_rotation()	
+end
+
+function draw_lvl1()
+	draw_zoom(8,0)	
 end
 
 -----------
@@ -141,19 +185,65 @@ function intersection(a,b)
         (abs(a.y-b.y)*2<(a.height+b.height));
 end
 
-function fadeout(pi,pe,pf)
-	pi+=((pe-pi)/pf)
-	pal(pi,pe,1)
+function fadeout()
+	for i=1,15 do
+		palarray[i]-=1
+		if(palarray[i]<0) palarray[i]=0
+		pal(i,palarray[i],1)
+	end
+end
+
+function draw_zoom(pixoffsetx,pixoffsety)
+	local x=0
+	local y=0
+	local xp=0
+	local yp=0
+	tr+=0.001
+	scale=cos(tr*3)*8+1
+--	if(scale==1)
+	for x=0,64 do
+		for y=40,104 do
+			xp=x/scale
+			yp=(y-40)/scale
+			if((xp>=0)and(xp<8)and(yp>=0)and(yp<8))then
+				pset(x,y,sget(pixoffsetx+xp,pixoffsety+yp))
+			end
+		end
+	end
+end
+
+function update_rotation()
+	ca,sa=cos(angle),sin(angle)
+	tr+=0.001
+	scale=abs(cos(tr*3))*8+1
+	angle-=0.005
+end
+
+function draw_rotation()
+	local col=0
+	local x=0
+	local y=0
+	local xp=0
+	local yp=0
+	for x=0,64 do
+		for y=20,84 do
+			xp=(x*ca+y*sa)/scale
+			yp=(-x*sa+y*ca)/scale
+			if((xp>=0)and(xp<8)and(yp>=0)and(yp<8))then
+				pset(x,y,sget(8+xp,yp))
+			end
+		end
+	end
 end
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000e000000e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700066cc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000666ccc700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000666ccccc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700555555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000666666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000e000000e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000099999900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 099999909ffffff90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
