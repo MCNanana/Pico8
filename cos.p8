@@ -32,20 +32,7 @@ function draw_homein()
 		ty=rnd(128)	
 		found=false
 	end
-	
-	tangle=atan2(tx-x,ty-y)
-	if(angle>=tangle+0.5)then
-		angle+=0.01
-		if(angle>1)angle=0
-	elseif(angle>tangle)then
-	 angle-=0.01
- elseif(angle+0.5<=tangle)then
-		angle-=0.01
-		if(angle<0)angle=1
-	else
-		angle+=0.01
-	end
-	
+		
 	vecx=length*cos(angle)
  vecy=length*sin(angle)
 	x+=vecx
@@ -56,7 +43,25 @@ function draw_homein()
 
 	circfill(tx,ty,4,3)
 
-	print("t: "..tangle,1,6,3)
+	if((vecy*(tx-x)+(-vecx*(ty-y)))>0)then
+		angle+=0.01
+	else
+		angle-=0.01
+	end
+	--[[tangle=atan2(tx-x,ty-y)
+	if(angle>=tangle+0.5)then
+		angle+=0.01
+		if(angle>1)angle=0
+	elseif(angle>tangle)then
+	 angle-=0.01
+ elseif(angle+0.5<=tangle)then
+		angle-=0.01
+		if(angle<0)angle=1
+	else
+		angle+=0.01
+	end]]
+
+	--print("t: "..tangle,1,6,3)
 	print("a: "..angle,1,16,3)
 end
 
