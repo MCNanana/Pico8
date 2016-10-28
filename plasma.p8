@@ -13,6 +13,21 @@ end
 
 function _draw()
 	cls()
+	draw_diagonal()
+end
+
+function draw_diagonal()
+	for i=1,128 do
+		for j=1,128 do
+			col=i+sin(timer/36)+j*cos(timer/72)+timer*10
+			pset(i,j,col%15)
+		end
+	end
+	print(col,1,6,4)
+	--print(timer,1,16,4)
+end
+
+function draw_x_axis()
 	for i=1,128 do
 		for j=1,128 do
 			col=sin((i+timer)/36)*15
