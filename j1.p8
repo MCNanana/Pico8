@@ -55,11 +55,10 @@ function _draw()
 	print("cpu "..stat(1),camx+2,7,7)
 	print(scale,camx+2,13,7)
 
-	draw_hero()
-
- print(level)
 	if(level=="il1")	draw_intro_lvl1()
 	if(level=="l1") draw_lvl1()
+
+	draw_hero()
 end
 
 ----------
@@ -78,6 +77,8 @@ function make_missile(x,y)
 	m={}
 	m.x=x
 	m.y=y
+	m.width=8
+	m.height=4
 	return m
 end
 
@@ -94,6 +95,12 @@ function update_hero()
 	foreach(hero.missiles,function(m) 
 		m.x+=3
 		if(m.x>127) del(hero.missiles,m)
+		for e in all(enemies) do
+			if intersection(m,e) then
+				del(hero.missiles,m)
+				del(enemies,e)
+			end
+		end
 		end)
 end
 
@@ -136,20 +143,21 @@ end
 -- ennemies --
 -- te: type d'ennemies
 -- 1:basique
-function make_ennemies(te)
-	ennemy={}
-	ennemy.x=64
-	ennemy.y=64
-
+function make_enemies(te,x,y)
+	enemy={}
+	enemy.x=x
+	enemy.y=y
+	enemy.width=8
+	enemy.height=8
+	
 	if(te==1)then
-		ennemy.x=128
-		ennemy.s=6
+		enemy.s=6
 	end
 
-	return ennemy
+	return enemy
 end
 
-function draw_ennemies(e)
+function draw_enemies(e)
 	spr(e.s,e.x,e.y)
 end
 
@@ -194,25 +202,27 @@ function draw_intro_lvl1()
 	camera(camx,camy)
 end
 
+--------
+-- lvl -
 function update_lvl1()
-	print("coucou")
 	if(t==10)then
-		add(ennemies,make_ennemies(1))
-		add(ennemies,make_ennemies(1))
-		add(ennemies,make_ennemies(1))
+		add(enemies,make_enemies(1,128,60))
+		add(enemies,make_enemies(1,148,60))
+		add(enemies,make_enemies(1,168,60))
 	end 
 	
-	for e in all(ennemies) do
+	for e in all(enemies) do
 		if(e.s==6)then 
-			e.x-=1 
-			print("coucou")
+			e.x-=0.2
+			e.y+=sin(t/60) 
+			print(sin(t),10,50)
 		end
 	end
 end
 
 function draw_lvl1()
-	--draw_zoom(8,0)	
-	foreach(ennemies,draw_ennemies)	
+	--draw_zoom(8,0)
+	foreach(enemies,draw_enemies)	
 end
 
 -----------
