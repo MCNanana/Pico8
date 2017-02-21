@@ -37,7 +37,7 @@ function _update()
 
 	if(level=="il1")	update_intro_lvl1()
  if(level=="l1") update_lvl1()
- 	
+	
  foreach(explosions,update_expl)
 end
 
@@ -55,10 +55,30 @@ function _draw()
 	print("cpu "..stat(1),camx+2,7,7)
 	print(scale,camx+2,13,7)
 
+	draw_hero()
+
 	if(level=="il1")	draw_intro_lvl1()
 	if(level=="l1") draw_lvl1()
 
-	draw_hero()
+	foreach(enemies,function(e) 
+		-- hero-enemy
+		if intersection(hero,e) then
+			print("game over",60,64,7)
+		end
+		-- hero.m-enemy
+		foreach(hero.missiles,function(m) 
+			if intersection(m,e) then
+				del(hero.missiles,m)
+				del(enemies,e)
+			end
+		end)
+		-- hero-enemy.m
+		for em in all(e.missiles) do
+			if intersection(hero,em) then
+				print("game over",60,64,7)
+			end
+		end
+	end)
 end
 
 ----------
@@ -73,10 +93,11 @@ function make_hero()
  hero.missiles={}
 end
 
-function make_missile(x,y)
+function make_missile(x,y,a)
 	m={}
 	m.x=x
 	m.y=y
+	m.angle=a
 	m.width=8
 	m.height=4
 	return m
@@ -89,19 +110,13 @@ function update_hero()
  if(btn(3)and hero.y<(127-bborder)) hero.y+=1.5
 	if(btn(4)and hero.shoot<(t-10)) then
 	 hero.shoot=t
-	 add(hero.missiles,make_missile(hero.x+3,hero.y-4))
+	 add(hero.missiles,make_missile(hero.x+3,hero.y-4),0)
 	end
 	if(btn(5)) fade=true
 	foreach(hero.missiles,function(m) 
 		m.x+=3
 		if(m.x>127) del(hero.missiles,m)
-		for e in all(enemies) do
-			if intersection(m,e) then
-				del(hero.missiles,m)
-				del(enemies,e)
-			end
-		end
-		end)
+	end)
 end
 
 function draw_hero()
@@ -149,6 +164,7 @@ function make_enemies(te,x,y)
 	enemy.y=y
 	enemy.width=8
 	enemy.height=8
+	enemy.missiles={}
 	
 	if(te==1)then
 		enemy.s=6
@@ -157,8 +173,25 @@ function make_enemies(te,x,y)
 	return enemy
 end
 
+function update_enemies(e)
+	if(e.s==6)then 
+		e.x-=0.2
+		e.y+=sin(t/60) 
+		foreach(e.missiles,function(m)
+			m.x-=cos(a)
+			m.y-=sin(a)
+		end)		
+		if(t%60==0)then
+			add(e.missiles,make_missile(e.x-4,e.y+4,0.5))
+		end
+	end
+end
+
 function draw_enemies(e)
 	spr(e.s,e.x,e.y)
+	foreach(e.missiles,function(m)
+		spr(5,m.x,m.y)
+	end)	
 end
 
 ---------------
@@ -212,11 +245,7 @@ function update_lvl1()
 	end 
 	
 	for e in all(enemies) do
-		if(e.s==6)then 
-			e.x-=0.2
-			e.y+=sin(t/60) 
-			print(sin(t),10,50)
-		end
+		update_enemies(e)
 	end
 end
 
