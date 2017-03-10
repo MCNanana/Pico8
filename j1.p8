@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 t=0 -- timer
+tt=0
 level="st"
 score=0
 
@@ -55,8 +56,17 @@ function _draw()
 	-- debug
 	print("mem "..stat(0),camx+2,1,7)
 	print("cpu "..stat(1),camx+2,7,7)
-	print(scale,camx+2,13,7)
-
+	print(t,camx+2,13,7)
+	print("hero.x "..hero.x.."- hero.y "..hero.y,camx+2,19,7)
+	if (#missiles>0) then
+		if (missiles[1]!=nil) then
+			print(missiles[1].y,camx+2,25,7)
+		else
+			print(missiles[1],camx+2,25,7)
+		end
+	else
+		print(#missiles,camx+2,25,7)
+	end
 	draw_hero()
 
 	if(level=="il1")	draw_intro_lvl1()
@@ -107,7 +117,7 @@ function update_hero()
  if(btn(3)and hero.y<(127-bborder)) hero.y+=1.5
 	if(btn(4)and hero.shoot<(t-10)) then
 	 hero.shoot=t
-	 add(hero.missiles,make_missile(hero.x+2,hero.y-2),0)
+	 add(hero.missiles,make_missile(hero.x+8,hero.y+2),0)
 	end
 	if(btn(5)) fade=true
 	foreach(hero.missiles,function(m) 
@@ -117,9 +127,9 @@ function update_hero()
 end
 
 function draw_hero()
-	spr(1,hero.x-4,hero.y-4)
-	if(t%2==0)then spr(2,hero.x-12,hero.y-4)
-	else spr(3,hero.x-12,hero.y-4) end
+	spr(1,hero.x,hero.y)
+	if(t%2==0)then spr(2,hero.x-8,hero.y)
+	else spr(3,hero.x-8,hero.y) end
 	foreach(hero.missiles,function(m)
 		spr(16,m.x,m.y)
 	end)
@@ -182,6 +192,7 @@ end
 -- 1:basique
 function make_enemies(te,x,y)
 	enemy={}
+	enemy.te=te
 	enemy.x=x
 	enemy.y=y
 	enemy.width=8
@@ -190,23 +201,40 @@ function make_enemies(te,x,y)
 	
 	if(te==1)then
 		enemy.s=6
+	elseif(te==2)then
+		enemy.s=7
 	end
 
 	return enemy
 end
 
 function update_enemies(e)
-	if(e.s==6)then 
+	if(e.te==1)then 
 		e.x-=0.2
 		e.y+=sin(t/60) 
-		if(t%60==0)then
+		if((e.x<128)and(t%80==0))then
 			add(missiles,make_missile(e.x-7,e.y+2,0.5))
 		end
+	elseif(e.te==2)then
+		e.x+=0.005
 	end
 end
 
 function draw_enemies(e)
-	spr(e.s,e.x,e.y)
+	if(e.te==2)then
+		x=64+cos(e.x)*48
+		y=64+sin(e.x)*24 
+		local col
+		if(y/12<4)then
+			col=5
+		else
+		col=8
+		end
+		circfill(x,y,y/12,col)--12+y%4)
+		sprite_zoom(x,y,y/40,56,0)
+	else
+		spr(e.s,e.x,e.y)
+	end
 end
 
 ---------------
@@ -253,27 +281,34 @@ end
 --------
 -- lvl -
 function update_lvl1()
-	if(t==10)then
+	--[[if(t==10)then
 		add(enemies,make_enemies(1,128,60))
-		add(enemies,make_enemies(1,148,60))
+		add(enemies,make_enemies(1,148,64))
 		add(enemies,make_enemies(1,168,60))
-	end 
-	
+	end]] 
+	if(t==10)then
+		for i=0,1,0.1 do 
+			add(enemies,make_enemies(2,i+t,i+t))
+		end
+	end
 	for e in all(enemies) do
 		update_enemies(e)
 	end
 end
 
 function draw_lvl1()
-	--draw_zoom(8,0)
 	foreach(enemies,draw_enemies)	
 end
 
 -----------
 -- tools --
 function intersection(a,b)
-	return (abs(a.x-b.x)*2<(a.width+b.width))and
-        (abs(a.y-b.y)*2<(a.height+b.height));
+	return ((a.x<b.x+b.width)and 
+   (a.x+a.width>b.x)and
+   (a.y<b.y+b.height)and
+   (a.height+a.y>b.y))
+	--[[return (abs(a.x-b.x)*2<(a.width+b.width))and
+        (abs(a.y-b.y)*2<(a.height+b.height));]]
 end
 
 function fadeout()
@@ -281,6 +316,22 @@ function fadeout()
 		palarray[i]-=1
 		if(palarray[i]<0) palarray[i]=0
 		pal(i,palarray[i],1)
+	end
+end
+
+function sprite_zoom(x,y,scale,pixoffsetx,pixoffsety)
+	local xp=0
+	local yp=0
+	--scale=cos(tr*3)*8+1
+--	if(scale==1)
+	for xos=0,8*scale do
+		for yos=0,8*scale do
+			xp=xos/scale
+			yp=yos/scale--(yos-40)/scale
+			--if((xp>=0)and(xp<8)and(yp>=0)and(yp<8))then
+				pset(x+xos,y+yos,sget(pixoffsetx+xp,pixoffsety+yp))
+			--end
+		end
 	end
 end
 
@@ -327,14 +378,14 @@ function draw_rotation()
 	end
 end
 __gfx__
-00000000e000000e00000000000000000022220002222220000ddddd000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000666000000000000000000002eeee202efffff200d11120000000000000000000000000000000000000000000000000000000000000000000000000
-007007006655cc7000000090000000902ee00fe22eeeeef201121120000000000000000000000000000000000000000000000000000000000000000000000000
-00077000f5555cc5004099aa0000089a2e0000e20222222011812156000000000000000000000000000000000000000000000000000000000000000000000000
-00077000f55665550009aa9a000499aa2e0000e20000000011112155000000000000000000000000000000000000000000000000000000000000000000000000
-007007000066f00000000890000004902ee00ee20000000001121120000000000000000000000000000000000000000000000000000000000000000000000000
-000000000fff0000000000000000000002eeee200000000000111200000000000000000000000000000000000000000000000000000000000000000000000000
-00000000e000000e0000000000000000002222000000000000012000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000e000000e00000000000000000022220002222220000ddddd777777770000000000000000000000000000000000000000000000000000000000000000
+0000000000666000000000000000000002eeee202efffff200d111207111aa070000000000000000000000000000000000000000000000000000000000000000
+007007006655cc7000000090000000902ee00fe22eeeeef20112112071aaa1170000000000000000000000000000000000000000000000000000000000000000
+00077000f5555cc5004099aa0000089a2e0000e2022222201181215671aaaa170000000000000000000000000000000000000000000000000000000000000000
+00077000f55665550009aa9a000499aa2e0000e20000000011112155711aaa170000000000000000000000000000000000000000000000000000000000000000
+007007000066f00000000890000004902ee00ee200000000011211207011a1170000000000000000000000000000000000000000000000000000000000000000
+000000000fff0000000000000000000002eeee200000000000111200700111070000000000000000000000000000000000000000000000000000000000000000
+00000000e000000e0000000000000000002222000000000000012000777777770000000000000000000000000000000000000000000000000000000000000000
 09999990000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 9ffffff9099999900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 9aaaaaf99ffffff90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
