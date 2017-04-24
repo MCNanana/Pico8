@@ -71,16 +71,16 @@ function _draw()
 	if(level=="title")then title()
 	else
 	-- border
-	--rectfill(camx,0,camx+128,uborder,5)
-	--rectfill(camx,128-bborder,camx+128,128,5)
-	for i=0,8 do
+	rectfill(camx,0,camx+128,uborder,5)
+	rectfill(camx,128-bborder,camx+128,128,5)
+	--[[for i=0,8 do
 		spr(81,i*16,0) 
 		spr(82,i*16+8,0) 
 		spr(82,i*16,8) 
 		spr(81,i*16+8,8) 
 	end
 	spr(80,0,16)
-	spr(83,120,16)
+	spr(83,120,16)]]
 	print("score "..score,camx+80,3,7)
 	-- debug
 	print("mem "..stat(0),camx+2,1,7)
@@ -104,21 +104,23 @@ function _draw()
 	draw_hero()
 
 	foreach(enemies,function(e) 
-		-- hero-enemy
-		if intersection(hero,e) then
-			print("game over",60,64,7)
-		end
-		-- hero.m-enemy
-		foreach(hero.missiles,function(m) 
-			if intersection(m,e) then
-				del(hero.missiles,m)
-				del(enemies,e)
-			end
-		end)
-		-- hero-enemy.m
-		for em in all(missiles) do
-			if intersection(hero,em) then
+		if e.status==1 then
+			-- hero-enemy
+			if intersection(hero,e) then
 				print("game over",60,64,7)
+			end
+			-- hero.m-enemy
+			foreach(hero.missiles,function(m) 
+				if intersection(m,e) then
+					del(hero.missiles,m)
+					del(enemies,e)
+				end
+			end)
+			-- hero-enemy.m
+			for em in all(missiles) do
+				if intersection(hero,em) then
+					print("game over",60,64,7)
+				end
 			end
 		end
 	end)
@@ -244,11 +246,11 @@ function make_enemies(te,x,y)
 	enemy.width=8
 	enemy.height=8
 	enemy.missiles={}
-	
+	ennemy.status=1
 	if(te==1)then
-		enemy.s=6
+		enemy.sprite=6
 	elseif(te==2)then
-		enemy.s=7
+		enemy.sprite=7
 	end
 
 	return enemy
@@ -277,13 +279,17 @@ function draw_enemies(e)
 		col=8
 		end
 		--circfill(x,y,y/12,col)--12+y%4)
-		
 		if(y/40>1.2)then
-			for j=1,15 do
-				col=dpal[j]
-				pal(j,col)
+			if(e.status==1) then
+				e.status=0
+				for j=1,15 do
+					col=dpal[j]
+					pal(j,col)
+				end
 			end
-		else pal()
+		else 
+			e.status=1
+			pal()
 		end	
 
 		sprite_zoom(x,y,y/40,56,0)
