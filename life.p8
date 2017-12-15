@@ -8,19 +8,19 @@ speed=5
 generation=0
 
 function create_cell(i,j)
-	cells[i*128+j]=1 
-	temp[i*128+j]=1 
+	cells[i+j*128]=1 
+	temp[i+j*128]=1 
 end
 
 function update_cell(i,j)
 	alivenb=0
-	index=i*128+j
+	index=i+j*128
 
-	for x=i-1,i+1 do
-		for y=j-1,j+1 do
-			tmpindex=x*128+y
-			if (tmpindex!=index) then
-				if (cells[tmpindex]==1) alivenb+=1
+	for x=-1,1 do
+		for y=-128,128,128 do
+			if (x!=0 or y!=0) then
+				tmpindex=index+x+y
+				alivenb+=cells[tmpindex]
 			end	
 		end
 	end	
@@ -42,16 +42,19 @@ end
 function _init()
 	for i=0,127 do
 		for j=0,127 do
-			cells[i*128+j]=0
-			temp[i*128+j]=0
+			cells[i+j*128]=0
+			temp[i+j*128]=0
 		end
 	end
-	
+		
+	-- oscillateur
+	-- blinker
 	--[[create_cell(10,10)
 	create_cell(10,11)
 	create_cell(10,12)]]
-	
-	create_cell(60,60)
+	-- pulsar
+	-- 1
+	--[[create_cell(60,60)
 	create_cell(61,60)
 	create_cell(62,60)
 	create_cell(63,60)
@@ -60,7 +63,26 @@ function _init()
 	create_cell(66,60)
 	create_cell(67,60)
 	create_cell(68,60)
-	create_cell(69,60)
+	create_cell(69,60)]]
+	-- 2
+	--[[create_cell(60,60)
+	create_cell(61,60)
+	create_cell(62,60)
+	create_cell(63,60)
+	create_cell(64,60)
+	create_cell(64,61)
+	create_cell(60,61)]]
+	-- small ship
+	create_cell(64,61)
+	create_cell(67,61)	
+	create_cell(68,62)	
+	create_cell(64,63)
+	create_cell(68,63)
+	create_cell(65,64)
+	create_cell(66,64)
+	create_cell(67,64)
+	create_cell(68,64)
+
 end
 
 function _update()
@@ -80,7 +102,7 @@ function _update()
 		-- buffer copy
 		for i=0,127 do
 			for j=0,127 do
-				cells[i*128+j]=temp[i*128+j]
+				cells[i+j*128]=temp[i+j*128]
 			end
 		end		
 	end
@@ -93,9 +115,13 @@ function _draw()
 	cls()
 	for i=0,127 do
 		for j=0,127 do
-			if (cells[i*128+j]==1) then pset(i,j,7)	end
+			if (cells[i+j*128]==1) then pset(i,j,7)	end
 		end
 	end
+	
 	print("generation: "..generation,1,1,6)
 	print("speed: "..speed,80,1,6)
+	print("memory: "..stat(0),1,110,6)
+	print("cpu: "..stat(1),1,120,6)
+	print("frame rate: "..stat(7),60,120,6)
 end
