@@ -2,17 +2,18 @@ pico-8 cartridge // http://www.pico-8.com
 version 15
 __lua__
 bck={}
-stars={}
 t = {}
+expl={}
+-- 7,8,9,10
 
-----------
--- init --
-function _init()
-	--add_bck()
-	--create_bck()
-	create_stars()
+function create_expl(xs,ys)
+	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=4,c=9,t=0,l=2})
+	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=3,c=10,t=1,l=2})
+	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=2,c=8,t=1,l=2})
+	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=1,c=7,t=1,l=2})
+
 end
-		
+	
 function add_bck()
 	local b={}
 	b.x=10
@@ -30,23 +31,6 @@ function create_bck()
  end
 end
 
-function create_stars()
-	for i=1,20 do
-		local s = {}
-		s.x = rnd(127)
-		s.y = rnd(127)
-		s.dy = 0.5 + (rnd(100) * 0.01)
-		if s.dy>1.45 then
-			s.dy=4
-		end
-		if s.dy < 1.2 then
-			s.col=1
- 	else
- 		s.col=7
-		end
-		add(stars,s)
-	end
-end
 
 function draw_bck()
 	for b in all(bck) do
@@ -54,17 +38,18 @@ function draw_bck()
 	end
 end
 
-function draw_stars()
-	for s in all(stars) do
-	 sy2=s.y-(s.dy+2*0.3)*2
-	 c=s.col
-		line(s.x,s.y,s.x,sy2,c)
-	end
+----------
+-- init --
+function _init()
+	create_expl(rnd(127),rnd(127))
+	--add_bck()
+	--create_bck()
 end
 
 ------------
 -- update --
 function _update()
+	create_expl(rnd(127),rnd(127))
 	--add_bck()
 	--add(t,#background)
 end
@@ -73,11 +58,22 @@ end
 -- draw --
 function _draw()
 	cls()
-	draw_stars()
+	foreach(expl,function(e)
+		if(e.l>0)then
+			--if(e.t==1) 
+			fillp(0b0101101001011010.1)
+			e.x+=e.velx
+			e.y+=e.vely
+			circfill(60+e.x,60+e.y,e.r,e.c)
+			e.r-=.1
+			fillp()
+			if(e.r>5) e.l=0
+		end
+	end)
 	--draw_bck()
-	foreach(bck,function(b)
+	--[[foreach(bck,function(b)
 		print(b.x,10,10)
-	end) 
+	end)]] 
 	--for b in all(bck) do
 	--	print(b.x,10,10)
 	--end
