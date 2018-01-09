@@ -2,15 +2,18 @@ pico-8 cartridge // http://www.pico-8.com
 version 15
 __lua__
 bck={}
-t = {}
+t=0
 expl={}
 -- 7,8,9,10
 
 function create_expl(xs,ys)
-	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=4,c=9,t=0,l=2})
-	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=3,c=10,t=1,l=2})
-	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=2,c=8,t=1,l=2})
-	add(expl,{x=xs,y=ys,velx=-.5+rnd(1),vely=-.5+rnd(1),r=1,c=7,t=1,l=2})
+	add(expl,{x=xs,y=ys,velx=-.1,vely=-.1,r=2.6,c=10,t=0,alive=true})
+	add(expl,{x=xs,y=ys,velx=.1,vely=.1,r=2.6,c=10,t=0,alive=true})
+	add(expl,{x=xs,y=ys,velx=0,vely=0,r=2.6,c=7,t=0,alive=true})
+
+	add(expl,{x=xs,y=ys,velx=-.2,vely=.5,r=3.4,c=9,t=1,alive=true})
+	add(expl,{x=xs,y=ys,velx=-.3,vely=.1,r=3.4,c=9,t=1,alive=true})
+	add(expl,{x=xs,y=ys,velx=.5,vely=-.2,r=3.4,c=9,t=1,alive=true})
 
 end
 	
@@ -49,7 +52,8 @@ end
 ------------
 -- update --
 function _update()
-	create_expl(rnd(127),rnd(127))
+	t+=1
+	if(t%10==0) create_expl(rnd(127),rnd(127))
 	--add_bck()
 	--add(t,#background)
 end
@@ -59,16 +63,25 @@ end
 function _draw()
 	cls()
 	foreach(expl,function(e)
-		if(e.l>0)then
-			--if(e.t==1) 
-			fillp(0b0101101001011010.1)
+		if(e.alive==true)then
 			e.x+=e.velx
 			e.y+=e.vely
-			circfill(60+e.x,60+e.y,e.r,e.c)
-			e.r-=.1
-			fillp()
-			if(e.r>5) e.l=0
+
+			if(e.t==0)then 
+				--fillp(0b0101101001011010.1)
+				circfill(e.x,e.y,e.r,e.c)
+				e.r+=.2
+				--fillp()
+				if(e.r>5) e.alive=false
+			else
+				fillp(0b0101101001011010.1)
+				circfill(e.x,e.y,e.r,e.c)
+				e.r-=.2
+				fillp()
+				if(e.r<0) e.alive=false
+			end
 		end
+		if(e.alive==false)del(e)
 	end)
 	--draw_bck()
 	--[[foreach(bck,function(b)
@@ -77,7 +90,6 @@ function _draw()
 	--for b in all(bck) do
 	--	print(b.x,10,10)
 	--end
-	foreach(t, print)
 end
 
 
