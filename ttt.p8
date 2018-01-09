@@ -44,7 +44,7 @@ end
 ----------
 -- init --
 function _init()
-	create_expl(rnd(127),rnd(127))
+	--create_expl(rnd(127),rnd(127))
 	--add_bck()
 	--create_bck()
 end
@@ -62,6 +62,9 @@ end
 -- draw --
 function _draw()
 	cls()
+	if(t%5==0)	pal(7,10)
+	circfill(60,60,10+t,7)
+	pal()
 	foreach(expl,function(e)
 		if(e.alive==true)then
 			e.x+=e.velx
@@ -81,7 +84,7 @@ function _draw()
 				if(e.r<0) e.alive=false
 			end
 		end
-		if(e.alive==false)del(e)
+		if(e.alive==false)del(expl,e)
 	end)
 	--draw_bck()
 	--[[foreach(bck,function(b)
