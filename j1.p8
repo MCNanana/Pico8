@@ -23,7 +23,7 @@ for i=0,990 do
 flip()
 goto _
 ]]
-t=0 -- timer
+timer=0 -- timer
 debug=0
 tt=0
 level="st"
@@ -36,8 +36,7 @@ palarray={}
 
 background={} -- stage backgrounds
 expl={} -- explosions
-smoke={}
-missiles={}
+--missiles={} --
 enemies={} -- 
 hero={} -- hero's ship
 textobj={}
@@ -58,18 +57,9 @@ function _init()
 		palarray[i]=i
 	end
 	make_hero()
-	--starfield
-	for i=0,100 do
-		str[i]={}
-		str[i].x=rnd(128)
-		str[i].y=rnd(128)
-		str[i].s=rnd(5)
-		str[i].c=strc[flr(str[i].s)]
-		str[i].s/=5
-	end
 
 	level="l1"
-	t=0--800
+	timer=0--800
 end
 
 ------------
@@ -78,14 +68,12 @@ function _update()
 	if(level=="title")then
 		if(btn(4)) level="l2"
 	else
-	t+=1
+	timer+=1
 	if(gameover==false) score+=0.1
 	
 	update_hero()
-	update_missiles()
-	for e in all(enemies) do
-		update_enemies(e)
-	end	
+	--update_missiles()
+	foreach(enemies,update_enemies)
 	
 	if(level=="il1")then	update_intro_lvl1()
 	elseif(level=="l1")then update_lvl1()
@@ -108,7 +96,7 @@ function _update()
 				end
 			end)
 			-- hero-enemy.m
-			for em in all(missiles) do
+			for em in all(e.missiles) do
 				if intersection(hero,em) then
 			 	gameover=true
 				end
@@ -138,7 +126,7 @@ function _draw()
 		-- ennemies
 		foreach(enemies,draw_enemies)	
 		-- missiles
-		draw_missiles()
+		--draw_missiles()
  	-- explosions
  	foreach(expl,draw_expl)
 		if(gameover) print("game over",60,64,7)
@@ -146,7 +134,7 @@ function _draw()
 	pal()
 	-- border
 	rectfill(camx,0,camx+127,uborder,5)
-	print("t "..t,camx+2,3,7)
+	print("t "..timer,camx+2,3,7)
 	print("score "..flr(score),camx+80,3,7)
 	rectfill(camx,128-bborder,camx+127,127,5)
 	print("mem "..stat(0),camx+2,122,7)
@@ -156,7 +144,7 @@ function _draw()
 	-- debug
 	if(debug==1)then
 		--other
-		print(t,camx+2,13,7)
+		print(timer,camx+2,13,7)
 		print("hero.x "..hero.x.."- hero.y "..hero.y,camx+2,19,7)
 		if (#missiles>0) then
 			if (missiles[1]!=nil) then
@@ -192,7 +180,8 @@ function init_lvl1(step)
 							}
 	if(step==1)then
 		--test
-		add(missiles,make_missile(120,60,0,2))
+		add(enemies,make_enemies(3,120,60))
+		--add(missiles,make_missile(120,60,0,2))
 		-- wave 1,2,3,4
 		add(enemies,make_enemies(1,127,40))
 		add(enemies,make_enemies(1,140,50))
@@ -216,8 +205,8 @@ function init_lvl1(step)
 end
 
 function update_lvl1()
-	if(t==1)then init_lvl1(1)
-	elseif(t==1700)then init_lvl1(2)
+	if(timer==1)then init_lvl1(1)
+	elseif(timer==1700)then init_lvl1(2)
 	end
 
 	foreach(background,function(b)
@@ -253,13 +242,13 @@ function draw_lvl1()
 		end
 	end)
 
-	if((t>740)and(t<860))then
-		if(t%5==0) pal(7,10)
-		circfill(60,80,t-720,7)
+	if((timer>740)and(timer<860))then
+		if(timer%5==0) pal(7,10)
+		circfill(60,80,timer-720,7)
 		make_expl(10+rnd(110),30+rnd(80))
 		pal()
 	end
-	if(t==830)then
+	if(timer==830)then
 	 foreach(background,function(b)
    if(b.t==4) b.t=5		 
 	 end)
@@ -267,8 +256,20 @@ function draw_lvl1()
 end
 
 -- level 2 --
+function init_lvl2()
+	--starfield
+	for i=0,100 do
+		str[i]={}
+		str[i].x=rnd(128)
+		str[i].y=rnd(128)
+		str[i].s=rnd(5)
+		str[i].c=strc[flr(str[i].s)]
+		str[i].s/=5
+	end
+end
+
 function update_lvl2()
-	if(t==10)then
+	if(timer==10)then
 		for i=0,1,0.1 do 
 			add(enemies,make_enemies(2,i+t,i+t))
 		end
@@ -308,8 +309,8 @@ function update_hero()
  if(btn(1)and hero.x<127) hero.x+=1.5
  if(btn(2)and hero.y>uborder) hero.y-=1.5
  if(btn(3)and hero.y<(127-bborder)) hero.y+=1.5
-	if(btn(4)and hero.shoot<(t-10)) then
-	 hero.shoot=t
+	if(btn(4)and hero.shoot<(timer-10)) then
+	 hero.shoot=timer
 	 add(hero.missiles,make_missile(hero.x+8,hero.y+2,1),0)
 	end
 	if(btn(5)) fade=true
@@ -318,7 +319,7 @@ function update_hero()
 		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
 	end)
 	-- smoke
-	if(t%2==0)then
+	if(timer%2==0)then
 		foreach(hero.smoke,function(s)
 			if((s.r==1)or(s.r>5))then 
 				if(flr(rnd(5))==2)then
@@ -391,6 +392,8 @@ end
 
 --------------
 -- missiles --
+-- 1:basique
+-- 2:homein
 function make_missile(x,y,a,t)
 	m={}
 	m.x=x;m.sx=x
@@ -399,15 +402,25 @@ function make_missile(x,y,a,t)
 	m.width=8
 	m.height=4
 	m.t=t
+	m.it=timer
+	m.status=1
 	return m
 end
 
-function update_missiles()
-	foreach(missiles,function(m)
-		if(m.t==1)then
-			m.x+=cos(m.angle)
-			m.y+=sin(m.angle)
+function update_missiles(m)
+	--foreach(missiles,function(m)
+	
+	if(m.t==1)then
+		if(m.x<0)then
+		 m.status=0 --del
 		else
+			m.x-=1--+=cos(m.angle)
+		--m.y+=sin(m.angle)
+		end
+	elseif(m.t==2)then
+	 if(timer-m.it>200)then 
+	  m.status=0 --del
+	 else
 			local vecx=cos(m.angle)
  		local vecy=sin(m.angle)
 			m.x+=vecx
@@ -418,39 +431,47 @@ function update_missiles()
 				m.angle-=0.01
 			end
 		end	
-	end)		
+	end
 end
 
-function draw_missiles()
-	foreach(missiles,function(m)
+function draw_missiles(m)
+	--foreach(missiles,function(m)
 		if(m.t==1)then
 			spr(5,m.x,m.y)
 		else	
-			spr(22,m.x,m.y)
-			print(m.x.." - "..m.y,100,60,7)
+			circfill(m.x,m.y,4,2)
+			circfill(m.x,m.y,3,14)
+			if (timer%5<3) pal(15,14)
+			circfill(m.x,m.y,2,15)
+			pal()
+			line(m.x+4*cos(m.angle),m.y+4*sin(m.angle),
+			m.x,m.y,8)
 		end	
-	end)	
+	--end)	
 end
 
 --------------
 -- ennemies --
--- te: type d'ennemies
+-- t: type d'ennemies
 -- 1:basique
 -- 2:cercle
+-- 3:homein
 function make_enemies(te,x,y)
 	enemy={}
 	enemy.t=te
 	enemy.x=x
 	enemy.y=y
 	enemy.xy=x
-	enemy.width=8
+	enemy.width=7
 	enemy.height=8
 	enemy.missiles={}
 	enemy.status=1
-	if(t==1)then
+	if(te==1)then
 		enemy.sprite=8
-	elseif(t==2)then
+	elseif(te==2)then
 		enemy.sprite=7
+	elseif(te==3)then
+		enemy.sprite=24
 	end
 
 	return enemy
@@ -458,14 +479,33 @@ end
 
 function update_enemies(e)
 	if(e.t==1)then 
-		e.x-=0.4
-		e.y+=sin(t/80+20)*0.4--*cos(t/100)
-		if((e.x<127)and(t%80==0))then
-			add(missiles,make_missile(e.x-7,e.y+2,0.5,1))
+		e.x-=.4
+		e.y+=sin(timer/80+20)*.4--*cos(t/100)
+		if((e.x<127)and(timer%80==0))then
+			add(e.missiles,make_missile(e.x-7,e.y+2,0.5,1))
 		end
 	elseif(e.t==2)then
-		e.xy+=0.005
+		e.xy+=.005
+	elseif(e.t==3)then
+		if(timer%3==0)then
+		 e.x-=1
+		else
+			e.x-=.2
+		end	
+		if((e.x<126)and(#e.missiles==0))then
+			add(e.missiles,make_missile(e.x-7,e.y+2,1,2))
+		end
 	end
+	
+	foreach(e.missiles,function(m)
+		update_missiles(m)
+		if(m.status==0)then
+		 if(m.t==2) make_expl(m.x,m.y)
+		 del(e.missiles,m)
+		end 
+	end)
+	
+	if(e.x<-10) del(enemies,e)
 end
 
 function draw_enemies(e)
@@ -490,6 +530,8 @@ function draw_enemies(e)
 		-- affichage standard
 		spr(e.sprite,e.x,e.y)
 	end
+
+	foreach(e.missiles,draw_missiles)
 end
 
 ---------------
@@ -663,23 +705,23 @@ function print_cube(xoffset,yoffset,x,y)
 	end 
 end
 __gfx__
-00000000e000000e00000000000000000022220002222220000ddddd000bb300000bb30000bb3300000000000000000000000000000000000000000000000000
-0000000000666000000000000000000002eeee202efffff200d1112000bbbb3000bbbb300bbbbb30000000000000000000000000000000000000000000000000
-007007006655cc7000000090000000902ee00fe22eeeeef20112112000bb5b3000bb5b30bbb55bb3000000000000000000000000000000000000000000000000
-00077000f5555cc5004099aa0000089a2e0000e2022222201181215600b5853000b58530bb5885b3000000000000000000000000000000000000000000000000
-00077000f55665550009aa9a000499aa2e0000e2000000001111215500bb5b3000bb5b30bb5f85b3000000000000000000000000000000000000000000000000
-007007000066f00000000890000004902ee00ee200000000011211200bbbbbb300bbbb30bbb55bb3000000000000000000000000000000000000000000000000
-000000000fff0000000000000000000002eeee2000000000001112000b00000b0bbbbbb30bbbbbb0000000000000000000000000000000000000000000000000
-00000000e000000e000000000000000000222200000000000001200000b000b0000bbb0000bbbb00000000000000000000000000000000000000000000000000
-0999999000000000000000000000000000000000000000000000000000bb0b300000000000000000000000000000000000000000000000000000000000000000
-9ffffff90999999000000000000000000000000000000000000000200bbbbbb30000000000000000000000000000000000000000000000000000000000000000
-9aaaaaf99ffffff90000000000000000000000000000000002000e200bbb5bb30000000000000000000000000000000000000000000000000000000000000000
-099999909faaaff900000000000000000000000000000000eeeeee280bb585b30000000000000000000000000000000000000000000000000000000000000000
-000000009aaaaaf900000000000000000000000000000000fffffe2800bb5b300000000000000000000000000000000000000000000000000000000000000000
-000000009faaaaa90000000000000000000000000000000002000f20000bb3000000000000000000000000000000000000000000000000000000000000000000
-00000000099999900000000000000000000000000000000000000020000b03000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000b000300000000000000000000000000000000000000000000000000000000000000000
-55555555555555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000e000000e00000000000000000022220002222220000ddddd00bb30000bbb330000bb3300000000000000000000000000000000000000000000000000
+0000000000666000000000000000000002eeee202efffff200d111200bbbb3000bbbb3000bbbbb30000000000000000000000000000000000000000000000000
+007007006655cc7000000090000000902ee00fe22eeeeef2011211200bb5b3000bb5b300bbb55bb3000000000000000000000000000000000000000000000000
+00077000f5555cc5004099aa0000089a2e0000e202222220118121560b5853000b585300bb5885b3000000000000000000000000000000000000000000000000
+00077000f55665550009aa9a000499aa2e0000e200000000111121550bb5b3000bb5b300bb5f85b3000000000000000000000000000000000000000000000000
+007007000066f00000000890000004902ee00ee20000000001121120bbbbbb30bbbbbb30bbb55bb3000000000000000000000000000000000000000000000000
+000000000fff0000000000000000000002eeee200000000000111200b00000b0bbbbbb300bbbbbb0000000000000000000000000000000000000000000000000
+00000000e000000e00000000000000000022220000000000000120000b000b0000bbb00000bbbb00000000000000000000000000000000000000000000000000
+099999900000000000000000000000000022220000000000000000000bb0b3000bbbb30000000000000000000000000000000000000000000000000000000000
+9ffffff909999990000000000000000002eeee200000000000000020bbbbbb30bbbbbb3000000000000000000000000000000000000000000000000000000000
+9aaaaaf99ffffff900000000000000002ee77fe20000000002000e20bbb5bb30bbbbbb3000000000000000000000000000000000000000000000000000000000
+099999909faaaff900000000000000002e7777e200000000eeeeee28bb585b30bbb5bb3000000000000000000000000000000000000000000000000000000000
+000000009aaaaaf900000000000000002e7777e200000000fffffe280bb5b3000b585b0000000000000000000000000000000000000000000000000000000000
+000000009faaaaa900000000000000002ee77ee20000000002000f2000bb300000b5b00000000000000000000000000000000000000000000000000000000000
+0000000009999990000000000000000002eeee20000000000000002000b03000b00b003000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000022220000000000000000000b000300bbb0bb3000000000000000000000000000000000000000000000000000000000
+55555555555555550000000000000000000000000000000000000000012345670000000000000000000000000000000000000000000000000000000000000000
 550b77b0550000b70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 50505b505050005b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 50055005500505000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
