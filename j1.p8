@@ -24,7 +24,7 @@ flip()
 goto _
 ]]
 timer=0 -- timer
-debug=0
+debug=1
 tt=0
 level="st"
 score=0
@@ -82,26 +82,27 @@ function _update()
 	
 	-- resolution tir
 	foreach(enemies,function(e)
-		if(e.status==1)then
+		--cas des zoom ici
+		--if(e.status==1)then
 			-- hero-enemy
 			if intersection(hero,e) then
 			 gameover=true
-			end
-			-- hero.m-enemy
-			foreach(hero.missiles,function(m) 
-				if intersection(m,e) then
-					del(hero.missiles,m)
-					make_expl(e.x,e.y)
-					del(enemies,e)
-				end
-			end)
-			-- hero-enemy.m
-			for em in all(e.missiles) do
-				if intersection(hero,em) then
-			 	gameover=true
-				end
-			end
-		end
+			else
+				-- hero.m-enemy
+				foreach(hero.missiles,function(m) 
+					if intersection(m,e) then
+						del(hero.missiles,m)
+						e.shot=1
+					end
+				end)
+				-- hero-enemy.missile
+				foreach(e.missiles,function(em)
+					if intersection(hero,em) then
+			 		gameover=true
+					end
+				end)
+			end	
+		--end
 	end)
 	
  foreach(expl,update_expl)
@@ -134,8 +135,7 @@ function _draw()
 	pal()
 	-- border
 	rectfill(camx,0,camx+127,uborder,5)
-	print("t "..timer,camx+2,3,7)
-	print("score "..flr(score),camx+80,3,7)
+	print("score "..flr(score),camx+2,3,7)
 	rectfill(camx,128-bborder,camx+127,127,5)
 	print("mem "..stat(0),camx+2,122,7)
 	print("cpu "..stat(1),camx+80,122,7)
@@ -143,18 +143,14 @@ function _draw()
 	--print_cube(0,80,40,40)
 	-- debug
 	if(debug==1)then
-		--other
 		print(timer,camx+2,13,7)
-		print("hero.x "..hero.x.."- hero.y "..hero.y,camx+2,19,7)
-		if (#missiles>0) then
-			if (missiles[1]!=nil) then
-				print(missiles[1].y,camx+2,25,7)
-			else
-				print(missiles[1],camx+2,25,7)
-			end
-		else
-			print(#missiles,camx+2,25,7)
-		end
+		foreach(enemies,function(e)
+		 if(#e.missiles>0)then
+		  print(#e.missiles,camx+2,19,7)
+		  print(e.life,camx+2,25,7)
+		 end
+		end)
+		--print("hero.x "..hero.x.."- hero.y "..hero.y,camx+2,19,7)
 	end
 end
 
@@ -180,8 +176,11 @@ function init_lvl1(step)
 							}
 	if(step==1)then
 		--test
-		add(enemies,make_enemies(3,120,60))
-		--add(missiles,make_missile(120,60,0,2))
+		if(debug==1)then
+   timer=2000		
+			--add(enemies,make_enemies(3,120,60))
+			add(enemies,make_enemies(10,120,60))
+		else
 		-- wave 1,2,3,4
 		add(enemies,make_enemies(1,127,40))
 		add(enemies,make_enemies(1,140,50))
@@ -195,6 +194,7 @@ function init_lvl1(step)
 		add(enemies,make_enemies(1,320,34))
 		add(enemies,make_enemies(1,310,64))
 		add(enemies,make_enemies(1,316,94))
+		end
 	elseif(step==2)then
  	add(enemies,make_enemies(2,.0,10))
  	add(enemies,make_enemies(2,.2,20))
@@ -241,18 +241,19 @@ function draw_lvl1()
 			spr(133+b.t,b.x,b.y)
 		end
 	end)
-
+	--scripts
 	if((timer>740)and(timer<860))then
 		if(timer%5==0) pal(7,10)
 		circfill(60,80,timer-720,7)
 		make_expl(10+rnd(110),30+rnd(80))
 		pal()
-	end
-	if(timer==830)then
+	elseif(timer==830)then
 	 foreach(background,function(b)
    if(b.t==4) b.t=5		 
 	 end)
-	end 
+	elseif(timer==2000)then
+		--boss
+	end
 end
 
 -- level 2 --
@@ -394,6 +395,7 @@ end
 -- missiles --
 -- 1:basique
 -- 2:homein
+-- 3:manic
 function make_missile(x,y,a,t)
 	m={}
 	m.x=x;m.sx=x
@@ -431,6 +433,9 @@ function update_missiles(m)
 				m.angle-=0.01
 			end
 		end	
+	elseif(m.t==3)then
+			m.x-=cos(m.angle)
+		 m.y-=sin(m.angle)
 	end
 end
 
@@ -438,7 +443,7 @@ function draw_missiles(m)
 	--foreach(missiles,function(m)
 		if(m.t==1)then
 			spr(5,m.x,m.y)
-		else	
+		elseif(m.t==2)then
 			circfill(m.x,m.y,4,2)
 			circfill(m.x,m.y,3,14)
 			if (timer%5<3) pal(15,14)
@@ -446,6 +451,8 @@ function draw_missiles(m)
 			pal()
 			line(m.x+4*cos(m.angle),m.y+4*sin(m.angle),
 			m.x,m.y,8)
+		elseif(m.t==3)then
+		 spr(20,m.x,m.y)
 		end	
 	--end)	
 end
@@ -456,6 +463,7 @@ end
 -- 1:basique
 -- 2:cercle
 -- 3:homein
+-- 10:boss1
 function make_enemies(te,x,y)
 	enemy={}
 	enemy.t=te
@@ -465,38 +473,24 @@ function make_enemies(te,x,y)
 	enemy.width=7
 	enemy.height=8
 	enemy.missiles={}
-	enemy.status=1
+	enemy.animation=1
+	enemy.shot=0
+	enemy.life=1
 	if(te==1)then
 		enemy.sprite=8
 	elseif(te==2)then
 		enemy.sprite=7
 	elseif(te==3)then
 		enemy.sprite=24
+	elseif(te==10)then
+		enemy.sprite=9
+		enemy.life=20
 	end
 
 	return enemy
 end
 
 function update_enemies(e)
-	if(e.t==1)then 
-		e.x-=.4
-		e.y+=sin(timer/80+20)*.4--*cos(t/100)
-		if((e.x<127)and(timer%80==0))then
-			add(e.missiles,make_missile(e.x-7,e.y+2,0.5,1))
-		end
-	elseif(e.t==2)then
-		e.xy+=.005
-	elseif(e.t==3)then
-		if(timer%3==0)then
-		 e.x-=1
-		else
-			e.x-=.2
-		end	
-		if((e.x<126)and(#e.missiles==0))then
-			add(e.missiles,make_missile(e.x-7,e.y+2,1,2))
-		end
-	end
-	
 	foreach(e.missiles,function(m)
 		update_missiles(m)
 		if(m.status==0)then
@@ -505,20 +499,62 @@ function update_enemies(e)
 		end 
 	end)
 	
-	if(e.x<-10) del(enemies,e)
+	if(e.shot==1)then
+	 e.life-=1
+	 e.shot=0
+	end
+	
+ if(e.life<1)then
+ 	--dead
+ 	if(e.life==0)then
+ 		make_expl(e.x,e.y)
+ 		e.life-=1
+ 	end	
+ 	if(#e.missiles==0) del(enemies,e)
+ else
+		--shooting
+		if(e.t==1)then 
+			e.x-=.4
+			e.y+=sin(timer/80+20)*.4--*cos(t/100)
+			if((e.x<127)and(timer%80==0))then
+				add(e.missiles,make_missile(e.x-7,e.y+2,0.5,1))
+			end
+		elseif(e.t==2)then
+			e.xy+=.005
+		elseif(e.t==3)then
+			if(timer%3==0)then
+		 	e.x-=1
+			else
+				e.x-=.2
+			end	
+			if((e.x<126)and(#e.missiles==0))then
+				add(e.missiles,make_missile(e.x-7,e.y+2,1,2))
+			end
+		elseif(e.t==10)then
+			if(timer%10==0)then
+				local os=cos(timer/20)+4
+				add(e.missiles,make_missile(e.x-7,e.y+2,.1+os,3))
+				add(e.missiles,make_missile(e.x-7,e.y+2,.2+os,3))
+				add(e.missiles,make_missile(e.x-7,e.y+2,1+os,3))
+				add(e.missiles,make_missile(e.x-7,e.y+2,.8,3))
+				add(e.missiles,make_missile(e.x-7,e.y+2,.9,3))
+   end			
+		end
+	end
 end
 
 function draw_enemies(e)
+	if(e.life>0)then
 	if(e.t==2)then
 		e.x=64+cos(e.xy)*48
 	 e.y=64+sin(e.xy)*24 
 		local col=0
 		local ey=e.y/40
 		if(ey<1.2)then
-			e.status=1
+			e.animation=1
 			pal()		
 		else
-		 e.status=0
+		 e.animation=0
 			for j=1,15 do
 				if(ey>2)then col=derpal[j]
 				else col=dpal[j] end
@@ -526,12 +562,24 @@ function draw_enemies(e)
 			end
 		end
 		sprite_zoom(e.x,e.y,ey,56,0)
+	elseif(e.t==10)then
+	 draw_stamina(camx+80,12,e.life)
+	 if((e.shot==1)and(e.life>0)) pal(11,8)
+		spr(e.sprite,e.x,e.y)
 	else
 		-- affichage standard
 		spr(e.sprite,e.x,e.y)
 	end
-
+	end
+	
 	foreach(e.missiles,draw_missiles)
+end
+
+function draw_stamina(x,y,life)
+ for i=0,life do
+  local xo=x+i
+  rectfill(xo,y,xo+1,y+2,8)
+ end
 end
 
 ---------------
