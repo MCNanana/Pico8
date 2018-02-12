@@ -577,7 +577,7 @@ evtlevel1={
 										1,-- init
 										100,300,500,700,-- wave4
 										1000,-- expl
-										900
+										1250 -- wave5
 										}
 evtindex=1
 evtexpl=6--1000										
@@ -616,16 +616,20 @@ function init_lvl1(step)
 		add(enemies,make_enemies(1,140,95,4,3))
 		add(enemies,make_enemies(1,153,12,4,3))
 	elseif(step==6)then -- wave 5
-		add(enemies,make_enemies(1,220,34))
-		add(enemies,make_enemies(1,210,64))
-		add(enemies,make_enemies(1,216,94))
-	elseif(step==9)then
- 	add(enemies,make_enemies(2,100,40))
- 	add(enemies,make_enemies(2,120,40))
- 	add(enemies,make_enemies(2,140,40))
- 	add(enemies,make_enemies(2,160,40))
- 	add(enemies,make_enemies(2,180,40))
- 	add(enemies,make_enemies(2,200,40))
+		add(enemies,make_enemies(1,127,34,5,7))
+		add(enemies,make_enemies(1,137,64,5,7))
+		add(enemies,make_enemies(1,147,94,5,7))
+		add(enemies,make_enemies(1,157,80,5,7))
+		add(enemies,make_enemies(1,167,70,5,7))
+		add(enemies,make_enemies(1,177,85,5,7))
+		add(enemies,make_enemies(1,187,105,5,7))
+	elseif(step==7)then
+ 	add(enemies,make_enemies(2,100,40,6,6))
+ 	add(enemies,make_enemies(2,120,40,6,6))
+ 	add(enemies,make_enemies(2,140,40,6,6))
+ 	add(enemies,make_enemies(2,160,40,6,6))
+ 	add(enemies,make_enemies(2,180,40,6,6))
+ 	add(enemies,make_enemies(2,200,40,6,6))
 	elseif(step==10)then
  	-- boss buildings
 		add(background,{x=160,y=106,velx=2.2,t=10})
@@ -644,7 +648,8 @@ function update_lvl1()
 		evtindex+=1
 	elseif(timer==evtlevel1[evtexpl]+190)then
 	 foreach(background,function(b)
-   if((b.t==4)or(b.t==6)) b.t=5		 
+   if(b.t==4) b.t=5	
+   if(b.t==6) del(background,b)	 
 	 end)	
 	elseif(timer==1700)then 
 		init_lvl1(9)
@@ -711,13 +716,15 @@ function draw_lvl1()
 	cls(1)
 	pal()
  -- starship animation
- x=100+(timer/100)
- y=86
- yssanim=flr(cos(timer/150)*2)
- spr(11,x-8,y+yssanim)
- if(timer%10<5)pal(9,10)
- spr(12,x,y+yssanim)
-	pal()
+ if(timer<evtlevel1[evtexpl]+200)then
+  x=100+(timer/100)
+	 y=86
+	 yssanim=flr(cos(timer/150)*2)
+	 spr(11,x-8,y+yssanim)
+		 if(timer%10<5)pal(9,10)
+ 	spr(12,x,y+yssanim)
+		pal()
+	end	
  if(timer<evtlevel1[evtexpl])then
 		if(timer%120==1)then
 	 	rad=3
