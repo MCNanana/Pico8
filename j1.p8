@@ -529,25 +529,21 @@ function draw_zoom(pixoffsetx,pixoffsety)
 	end
 end
 
-function update_rotation()
+function draw_rotation(x,y,angle,pixoffsetx,pixoffsety)
+	--angle,tr=0,0
 	ca,sa=cos(angle),sin(angle)
-	tr+=0.001
-	scale=abs(cos(tr*3))*8+1
-	angle-=0.005
-end
+	--tr+=.001
+	scale=1
 
-function draw_rotation()
-	local col=0
-	local x=0
-	local y=0
 	local xp=0
 	local yp=0
-	for x=0,64 do
-		for y=20,84 do
-			xp=(x*ca+y*sa)/scale
-			yp=(-x*sa+y*ca)/scale
-			if((xp>=0)and(xp<8)and(yp>=0)and(yp<8))then
-				pset(x,y,sget(8+xp,yp))
+	for xo=-4,7 do
+		for yo=-4,7 do
+			xp=((xo*ca+yo*sa)+(4*scale))/scale
+			yp=((-xo*sa+yo*ca)+(4*scale))/scale
+			if((xp>=0)and(xp<8)
+					and(yp>=0)and(yp<8))then
+				pset(x+xo,y+yo,sget(pixoffsetx+xp,pixoffsety+yp))
 			end
 		end
 	end
@@ -955,6 +951,7 @@ function draw_enemies(e)
 				end
 			end
 			sprite_zoom(e.x,e.y,ey,56,0)
+			pal()
 		elseif(e.t==10)then 
 		 -- boss
    if(e.animation==1)then
