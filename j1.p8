@@ -64,9 +64,12 @@ tr,scale,angle=0,1,1
 -- init --
 function _init()
 	make_hero()
-	_update=update_title
-	_draw=draw_title
-	level="title"
+	--_update=update_title
+	--_draw=draw_title
+	_update=update_game
+	_draw=draw_game
+	level="l1"
+	--evtindex=5
 	timer=0--1999--800
 	debug=1
 end
@@ -74,7 +77,7 @@ end
 ------------
 -- update --
 function update_game()
-	--if(gameover==false)then
+	if(debug==1)or(gameover==false)then
 	 timer+=1
 	 score+=.1
 	
@@ -112,15 +115,11 @@ function update_game()
 	end)
 	
   foreach(expl,update_expl)
- --end
+ end
 end
 
 ----------
 -- draw --
-function _draw()
-
-end
-
 function draw_game()
 	cls()
 	pal()
@@ -740,51 +739,50 @@ function draw_lvl1()
 	pal()
  -- starship animation
  if(spaceship!=nil)then
-  print("coucou",40,40,7)
- end
- --[[if(timer<evtlevel1[evtexpl]+200)then
+ if(timer<evtlevel1[evtexpl]+200)then
   if(timer<evtlevel1[evtexpl])then
-   x=100+(timer/100)
-	  y=86
-	  xssanim=0
-	  yssanim=flr(cos(timer/150)*2)
-	 else
-	  xssanim+=.5
-	  yssanim+=.2
-	 end 
-	 spr(11,x-8,y+yssanim)
+   spaceship[1]=100+(timer/100)
+	  spaceship[2]=86
+	  spaceship[3]=0
+	  spaceship[4]=flr(cos(timer/150)*2)
+	 else -- geting out
+	  spaceship[3]+=.5
+	  spaceship[4]+=.2
+	 end -- draw ss
+	 spr(11,spaceship[1]-8,spaceship[2]+spaceship[4])
 		 if(timer%10<5)pal(9,10)
- 	spr(12,x,y+yssanim)
+ 	spr(12,spaceship[1],spaceship[2]+spaceship[4])
 		pal()
 	end	
  if(timer<evtlevel1[evtexpl])then
 	-- launching ships	
 		if(timer%120==1)then
 	 	rad=3
-	 	xvanim=0
-	 	yvanim=yssanim+2
+	 	spaceship[5]=0
+	 	spaceship[6]=spaceship[4]+2
 		end
-		sspr(88,8,2,3,x+xvanim,y+yvanim+4)
+		sspr(88,8,2,3,spaceship[1]+spaceship[5],spaceship[2]+spaceship[6]+4)
 		fillp(0b0101101001011010.1)
-		circfill(x+xvanim,y+yvanim+4,rad,6)
+		circfill(spaceship[1]+spaceship[5],spaceship[2]+spaceship[6]+4,rad,6)
 		fillp()
-	 xvanim+=.3;yvanim+=.1;rad-=.1
+	 spaceship[5]+=.3;spaceship[6]+=.1;rad-=.1
 	elseif(timer==evtlevel1[evtexpl])then
-	 rad=6;xvanim=-6;yvanim=yssanim-5
+	 rad=6;spaceship[5]=-6;spaceship[6]=spaceship[4]-5
 	elseif(timer<evtlevel1[evtexpl]+95)then
 	 fillp(0b0101101001011010.1)
 	 if(timer%20>10) pal(6,7)
-	 circfill(x+xvanim+4,y+yvanim+8,rad,6)
+	 circfill(spaceship[1]+spaceship[5]+4,spaceship[2]+spaceship[6]+8,rad,6)
 	 fillp()
 	 if(timer%20<10) pal(14,15)
-	 sprite_zoom(x+xvanim,y+yvanim+4,(timer-evtlevel1[evtexpl])/40,88,12,2,3)
+	 sprite_zoom(spaceship[1]+spaceship[5],spaceship[2]+spaceship[6]+4,(timer-evtlevel1[evtexpl])/40,88,12,2,3)
   --sspr(88,12,4,4,x+xvanim,y+yvanim+4)
 	 pal()
 	 fillp(0b0101101001011010.1)
-	 circfill(x,y+4,rad,6)
+	 circfill(spaceship[1],spaceship[2]+4,rad,6)
 	 fillp()
-	 xvanim-=.3;yvanim-=.4;rad-=.05
-	end]]
+	 spaceship[5]-=.3;spaceship[6]-=.4;rad-=.05
+	end
+	end
 	-- background
 	foreach(background,function(b)
 		if(b.t==3) then
