@@ -142,8 +142,8 @@ function draw_game()
 		rectfill(camx,128-bborder,camx+127,127,5)
 		-- printing
 		print("score "..flr(score),camx+2,camy+3,7)
-		if(gameover) print_swap("go",45,60)
-  if(starting)	print_swap("s",45,60)
+		if(gameover) print_swap("go",50,60)
+  if(starting)	print_swap("s",55,60)
   if(warning)	print_swap("w",45,60)
   --[[if(scrwavetimer>0)then
    print_number(scrwave,80,40)
@@ -168,189 +168,6 @@ function draw_game()
 		 end
 		end)]]
 		--print("hero.x "..hero.x.."- hero.y "..hero.y,2,25,7)
-end
-
-----------------
--- explosions --
-function make_expl(xs,ys)
-	add(expl,{x=xs,y=ys,velx=-.1,vely=-.1,r=2.6,c=10,t=0,alive=true})
-	add(expl,{x=xs,y=ys,velx=.1,vely=.1,r=2.6,c=10,t=0,alive=true})
-	add(expl,{x=xs,y=ys,velx=0,vely=0,r=2.6,c=7,t=0,alive=true})
-	add(expl,{x=xs,y=ys,velx=-.2,vely=.5,r=3.4,c=9,t=1,alive=true})
-	add(expl,{x=xs,y=ys,velx=-.3,vely=.1,r=3.4,c=9,t=1,alive=true})
-	add(expl,{x=xs,y=ys,velx=.5,vely=-.2,r=3.4,c=9,t=1,alive=true})
-end
-
-function update_expl(e)
-	if(e.alive==true)then
-		e.x+=e.velx
-		e.y+=e.vely
-
-		if(e.t==0)then 
-			e.r+=.2
-			if(e.r>5) e.alive=false
-		else
-			e.r-=.2
-			if(e.r<0) e.alive=false
-		end
-	else del(expl,e)
-	end
-end
-
-function draw_expl(e)
-	if(e.t==0)then 
-		circfill(e.x,e.y,e.r,e.c)
-	else
-		fillp(0b0101101001011010.1)
-		circfill(e.x,e.y,e.r,e.c)
-		fillp()
-	end
-end
-
---------------
--- missiles --
--- 1:basique
--- 2:homein
--- 3:manic
-function make_missile(x,y,a,s,t)
-	m={}
-	m.x=x;m.sx=x
-	m.y=y;m.sy=y
-	m.angle=a
-	m.speed=s
-	m.width=8
-	if(t==3)then
-		m.height=8
-	else
-		m.height=4
-	end	
-	m.t=t
-	m.it=timer
-	m.status=1
-	return m
-end
-
-function update_missiles(m)
-	if(m.t==0)then
-		m.x+=3
-		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
-	elseif(m.t==1)then
-		if(m.x<0)then
-		 m.status=0 --del
-		else
-			m.x-=m.speed--+=cos(m.angle)
-		--m.y+=sin(m.angle)
-		end
-	elseif(m.t==2)then -- homein
-	 if(timer-m.it>200)then 
-	  m.status=0 --del
-	 else
-			local vecx=cos(m.angle)
- 		local vecy=sin(m.angle)
-			m.x+=vecx
-			m.y+=vecy
-			if((vecy*(hero.x-m.x)+(-vecx*(hero.y-m.y)))>0)then
-				m.angle+=0.01
-			else
-				m.angle-=0.01
-			end
-		end	
-	elseif(m.t==3)then -- manic
-		if(m.x<0)then
-		 m.status=0 --del
-		else
-			m.x-=cos(m.angle)
-		 m.y-=sin(m.angle)
-		end 
-	end
-end
-
-function draw_missiles(m)
-	if(m.t==0)then
-		spr(2,camx+m.x,camy+m.y)	
-	elseif(m.t==1)then
-		spr(5,camx+m.x,camy+m.y)
-	elseif(m.t==2)then
-		draw_rotation(m.x,m.y,m.angle,48,8)
-	 print(m.x..", "..m.angle,2,25,7)
-		--[[circfill(m.x,m.y,4,2)
-		circfill(m.x,m.y,3,14)
-		if (timer%5<3) pal(15,14)
-		circfill(m.x,m.y,2,15)
-		pal()
-		line(m.x+4*cos(m.angle),m.y+4*sin(m.angle),
-		m.x,m.y,8)]]
-	elseif(m.t==3)then
-	 spr(36,camx+m.x,camy+m.y)
-	end	
-end
-
-----------
--- hero --
-function make_hero()
-	hero.x=20
-	hero.y=74
-	hero.width=8
-	hero.height=7
-	--hero.i=false
- hero.shoot=0
- hero.missiles={}
- hero.smoke={
- 	{x=18;y=77;r=3};
- 	{x=16;y=77;r=3};
- 	{x=15;y=77;r=2};
-		{x=12;y=77;r=2};
-		{x=10;y=77;r=1};
- 	{x=8;y=77;r=1};
- 	{x=6;y=77;r=4}
- 	}
-end
-
-function update_hero()
- if(btn(0)and hero.x>0) hero.x-=1.5
- if(btn(1)and hero.x<123) hero.x+=1.5
- if(btn(2)and hero.y>uborder) hero.y-=1.5
- if(btn(3)and hero.y<(127-bborder-7)) hero.y+=1.5
-	if(btn(4)and hero.shoot<(timer-10)) then
-	 hero.shoot=timer
-	 add(hero.missiles,make_missile(hero.x+8,hero.y+2,1,3,0))
-	end
-	if(btn(5)) fade=true
- -- missiles
-	foreach(hero.missiles,function(m) 
-		update_missiles(m)
-	end)
-	-- smoke
-	if(timer%2==0)then
-		foreach(hero.smoke,function(s)
-			if((s.r==1)or(s.r>5))then 
-				if(flr(rnd(5))==2)then
-					s.x=hero.x-3;s.y=hero.y+3;s.r=4
-				else
-					s.x=hero.x-2;s.y=hero.y+3;s.r=3
-				end
-			else 
-				if(s.r<4)then s.x-=2.6;s.r-=.5
-				else s.x-=3.6;s.r+=.1 end
-			end
-		end)
-	end
-end
-
-function draw_hero()
-	pal()
-	-- smoke
-	fillp(23130.5)
-	foreach(hero.smoke,function(s)
-		if(s.r>3)then circfill(s.x,s.y,s.r,5)
-		else circfill(s.x,s.y,s.r,7+s.r)
-		end
-		end)
-	fillp()
-	-- aircraft
-	spr(1,camx+hero.x,camy+hero.y)
-	-- missiles	
-	foreach(hero.missiles,draw_missiles)
 end
 
 ---------------
@@ -472,6 +289,14 @@ function intersection(a,b)
         (abs(a.y-b.y)*2<(a.height+b.height));]]
 end
 
+function shake_screen()
+	camx+=shaking[shakeindex]
+	shakeindex+=1
+	camy+=shaking[shakeindex]
+	shakeindex+=1
+	if(shakeindex==7) shakeindex=1
+end
+
 function print_number(n,x,y)
  n1=flr((n/10)%10)
  n2=n%10
@@ -586,12 +411,16 @@ end
 evtlevel1={
 										1,-- init
 										100,300,500,700,-- wave4
-										1000,-- expl
+										1000,-- expl(6)
 										1280, -- wave5
-										1350 -- wave6
+										1350, -- wave6
+										1700, -- wave7
+										2000 --(10)
 										}
 evtindex=1
-evtexpl=6--1000										
+evtexpl=6 --1000	
+evtboss=10--2000
+									
 -- level 1 --
 function init_lvl1(step)
 	if(step==1)then -- init
@@ -613,12 +442,11 @@ function init_lvl1(step)
 								{x=64,y=114,velx=2.2,t=4},
 								{x=128,y=114,velx=2.2,t=4},
 							}
-		spaceship={
+		ss={
 								x=0,y=0,
 								xssanim=0,yssanim=0,
 								xvanim=0,yvanim=0
 							}					
-		xvanim,yvanim=0,0							
 	elseif(step==2)then -- wave 1
 		starting=false
 		--add(enemies,make_enemies(3,128,70,1,1))
@@ -636,7 +464,7 @@ function init_lvl1(step)
 		add(enemies,make_enemies(1,140,95,4,3))
 		add(enemies,make_enemies(1,153,12,4,3))
 	elseif(step==7)then -- wave 5
-		add(enemies,make_enemies(3,130,50,5,2))
+		add(enemies,make_enemies(3,130,40,5,2))
 		add(enemies,make_enemies(1,128,80,5,2))
 		--[[add(enemies,make_enemies(1,127,34,5,7))
 		add(enemies,make_enemies(1,137,64,5,7))
@@ -652,6 +480,12 @@ function init_lvl1(step)
  	add(enemies,make_enemies(2,160,40,6,6))
  	add(enemies,make_enemies(2,180,40,6,6))
  	add(enemies,make_enemies(2,200,40,6,6))
+	elseif(step==9)then -- wave 7
+		add(enemies,make_enemies(3,130,25,5,2))
+		add(enemies,make_enemies(3,130,105,5,2))
+		add(enemies,make_enemies(1,132,60,5,2))
+		add(enemies,make_enemies(1,132,80,5,2))
+		add(enemies,make_enemies(1,132,100,5,2))
 	elseif(step==10)then
  	-- boss buildings
 		add(background,{x=160,y=106,velx=2.2,t=10})
@@ -738,49 +572,49 @@ function draw_lvl1()
 	cls(1)
 	pal()
  -- starship animation
- if(spaceship!=nil)then
+ if(ss!=nil)then
  if(timer<evtlevel1[evtexpl]+200)then
   if(timer<evtlevel1[evtexpl])then
-   spaceship[1]=100+(timer/100)
-	  spaceship[2]=86
-	  spaceship[3]=0
-	  spaceship[4]=flr(cos(timer/150)*2)
+   ss[1]=100+(timer/100)
+	  ss[2]=86
+	  ss[3]=0
+	  ss[4]=flr(cos(timer/150)*2)
 	 else -- geting out
-	  spaceship[3]+=.5
-	  spaceship[4]+=.2
+	  ss[3]+=.5
+	  ss[4]+=.2
 	 end -- draw ss
-	 spr(11,spaceship[1]-8,spaceship[2]+spaceship[4])
+	 spr(11,ss[1]-8,ss[2]+ss[4])
 		 if(timer%10<5)pal(9,10)
- 	spr(12,spaceship[1],spaceship[2]+spaceship[4])
+ 	spr(12,ss[1],ss[2]+ss[4])
 		pal()
 	end	
  if(timer<evtlevel1[evtexpl])then
 	-- launching ships	
 		if(timer%120==1)then
 	 	rad=3
-	 	spaceship[5]=0
-	 	spaceship[6]=spaceship[4]+2
+	 	ss[5]=0
+	 	ss[6]=ss[4]+2
 		end
-		sspr(88,8,2,3,spaceship[1]+spaceship[5],spaceship[2]+spaceship[6]+4)
+		sspr(88,8,2,3,ss[1]+ss[5],ss[2]+ss[6]+4)
 		fillp(0b0101101001011010.1)
-		circfill(spaceship[1]+spaceship[5],spaceship[2]+spaceship[6]+4,rad,6)
+		circfill(ss[1]+ss[5],ss[2]+ss[6]+4,rad,6)
 		fillp()
-	 spaceship[5]+=.3;spaceship[6]+=.1;rad-=.1
+	 ss[5]+=.3;ss[6]+=.1;rad-=.1
 	elseif(timer==evtlevel1[evtexpl])then
-	 rad=6;spaceship[5]=-6;spaceship[6]=spaceship[4]-5
+	 rad=6;ss[5]=-6;ss[6]=ss[4]-5
 	elseif(timer<evtlevel1[evtexpl]+95)then
 	 fillp(0b0101101001011010.1)
 	 if(timer%20>10) pal(6,7)
-	 circfill(spaceship[1]+spaceship[5]+4,spaceship[2]+spaceship[6]+8,rad,6)
+	 circfill(ss[1]+ss[5]+4,ss[2]+ss[6]+8,rad,6)
 	 fillp()
 	 if(timer%20<10) pal(14,15)
-	 sprite_zoom(spaceship[1]+spaceship[5],spaceship[2]+spaceship[6]+4,(timer-evtlevel1[evtexpl])/40,88,12,2,3)
+	 sprite_zoom(ss[1]+ss[5],ss[2]+ss[6]+4,(timer-evtlevel1[evtexpl])/40,88,12,2,3)
   --sspr(88,12,4,4,x+xvanim,y+yvanim+4)
 	 pal()
 	 fillp(0b0101101001011010.1)
-	 circfill(spaceship[1],spaceship[2]+4,rad,6)
+	 circfill(ss[1],ss[2]+4,rad,6)
 	 fillp()
-	 spaceship[5]-=.3;spaceship[6]-=.4;rad-=.05
+	 ss[5]-=.3;ss[6]-=.4;rad-=.05
 	end
 	end
 	-- background
@@ -808,10 +642,11 @@ function draw_lvl1()
 		circfill(60,80,timer-860,7)
 		make_expl(10+rnd(110),30+rnd(80))
 		pal()
-	elseif((timer>2000)and(timer<2168))then
+		shake_screen()
+	elseif((timer>evtlevel1[evtboss])and(timer<evtlevel1[evtboss]+100))then
 		--boss
 		warning=true
-	elseif(timer>2100)then
+	elseif(timer>evtlevel1[evtboss]+100)then
 	 warning=false
 	end
 end
@@ -914,7 +749,7 @@ function update_enemies(e)
  else
 		--shooting and moving
 		if(e.t==1)then 
-			e.x-=.4
+			e.x-=.6
 			e.y+=sin((e.x+timer)/100)*.3--*cos(t/100)
 			if((e.x<127)and(timer%80==0))then
 				e.shoot=1
@@ -922,7 +757,7 @@ function update_enemies(e)
 			end
 		elseif(e.t==2)then
 			if(e.animation==1)then
-			 e.x-=.8
+			 e.x-=1
 			 if(e.x<64)then
 			  e.animation=0
 			  e.anim_begin=timer
@@ -935,7 +770,7 @@ function update_enemies(e)
 	 		--e.y=64+sin((timer-e.anim_begin)/200)*24 
 	 	end	
 		elseif(e.t==3)then
-			e.x-=.4
+			e.x-=.6
 			if((e.x<124)and(#e.missiles==0))then
 				e.shoot=1
 				add(e.missiles,make_missile(e.x-7,e.y+2,0.5,2,2))
@@ -968,13 +803,7 @@ function update_enemies(e)
 end
 
 function draw_enemies(e)
-	if(boss==true)and((shakeindex>1)or(e.hit==1))then
-		camx+=shaking[shakeindex]
- 	shakeindex+=1
-		camy+=shaking[shakeindex]
-		shakeindex+=1
-		if(shakeindex==7) shakeindex=1
-	end
+	if((boss==true)and((shakeindex>1)or(e.hit==1)))	shake_screen()
 	
 	if(e.life>0)then
 		if((e.t==2)and(e.animation==0))then
@@ -1033,6 +862,195 @@ function draw_stamina(x,y,life)
   xo=timer%life
   if(xo<=current)rectfill(x+xo,y,x+xo+1,y+2,10)
  end
+end
+
+-->8
+----------------
+-- explosions --
+function make_expl(xs,ys)
+	add(expl,{x=xs,y=ys,velx=-.1,vely=-.1,r=2.6,c=10,t=0,alive=true})
+	add(expl,{x=xs,y=ys,velx=.1,vely=.1,r=2.6,c=10,t=0,alive=true})
+	add(expl,{x=xs,y=ys,velx=0,vely=0,r=2.6,c=7,t=0,alive=true})
+	add(expl,{x=xs,y=ys,velx=-.2,vely=.5,r=3.4,c=9,t=1,alive=true})
+	add(expl,{x=xs,y=ys,velx=-.3,vely=.1,r=3.4,c=9,t=1,alive=true})
+	add(expl,{x=xs,y=ys,velx=.5,vely=-.2,r=3.4,c=9,t=1,alive=true})
+	sfx(1)
+end
+
+function update_expl(e)
+	if(e.alive==true)then
+		e.x+=e.velx
+		e.y+=e.vely
+
+		if(e.t==0)then 
+			e.r+=.2
+			if(e.r>5) e.alive=false
+		else
+			e.r-=.2
+			if(e.r<0) e.alive=false
+		end
+	else del(expl,e)
+	end
+end
+
+function draw_expl(e)
+	if(e.t==0)then 
+		circfill(e.x,e.y,e.r,e.c)
+	else
+		fillp(0b0101101001011010.1)
+		circfill(e.x,e.y,e.r,e.c)
+		fillp()
+	end
+end
+
+-->8
+--------------
+-- missiles --
+-- 0:hero
+-- 1:basique
+-- 2:homein
+-- 3:manic
+function make_missile(x,y,a,s,t)
+	m={}
+	m.x=x;m.sx=x
+	m.y=y;m.sy=y
+	m.angle=a
+	m.speed=s
+	m.width=8
+	if(t==3)then
+		m.height=8
+	else
+		m.height=4
+	end	
+	m.t=t
+	m.it=timer
+	m.status=1
+	if(m.t==0) sfx(0)
+	return m
+end
+
+function update_missiles(m)
+	if(m.t==0)then
+		m.x+=3
+		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
+	elseif(m.t==1)then
+		if(m.x<0)then
+		 m.status=0 --del
+		else
+			m.x-=m.speed--+=cos(m.angle)
+		--m.y+=sin(m.angle)
+		end
+	elseif(m.t==2)then -- homein
+	 if(timer-m.it>200)then 
+	  m.status=0 --del
+	 else
+			local vecx=cos(m.angle)
+ 		local vecy=sin(m.angle)
+			m.x+=vecx
+			m.y+=vecy
+			if((vecy*(hero.x-m.x)+(-vecx*(hero.y-m.y)))>0)then
+				m.angle+=0.01
+			else
+				m.angle-=0.01
+			end
+		end	
+	elseif(m.t==3)then -- manic
+		if(m.x<0)then
+		 m.status=0 --del
+		else
+			m.x-=cos(m.angle)
+		 m.y-=sin(m.angle)
+		end 
+	end
+end
+
+function draw_missiles(m)
+	if(m.t==0)then
+		spr(2,camx+m.x,camy+m.y)	
+	elseif(m.t==1)then
+		spr(5,camx+m.x,camy+m.y)
+	elseif(m.t==2)then
+		draw_rotation(m.x,m.y,m.angle,48,8)
+	 print(m.x..", "..m.angle,2,25,7)
+		--[[circfill(m.x,m.y,4,2)
+		circfill(m.x,m.y,3,14)
+		if (timer%5<3) pal(15,14)
+		circfill(m.x,m.y,2,15)
+		pal()
+		line(m.x+4*cos(m.angle),m.y+4*sin(m.angle),
+		m.x,m.y,8)]]
+	elseif(m.t==3)then
+	 spr(36,camx+m.x,camy+m.y)
+	end	
+end
+
+-->8
+----------
+-- hero --
+function make_hero()
+	hero.x=20
+	hero.y=74
+	hero.width=8
+	hero.height=7
+	--hero.i=false
+ hero.shoot=0
+ hero.missiles={}
+ hero.smoke={
+ 	{x=18;y=77;r=3};
+ 	{x=16;y=77;r=3};
+ 	{x=15;y=77;r=2};
+		{x=12;y=77;r=2};
+		{x=10;y=77;r=1};
+ 	{x=8;y=77;r=1};
+ 	{x=6;y=77;r=4}
+ 	}
+end
+
+function update_hero()
+ if(btn(0)and hero.x>0) hero.x-=1.5
+ if(btn(1)and hero.x<123) hero.x+=1.5
+ if(btn(2)and hero.y>uborder) hero.y-=1.5
+ if(btn(3)and hero.y<(127-bborder-7)) hero.y+=1.5
+	if(btn(4)and hero.shoot<(timer-10)) then
+	 hero.shoot=timer
+	 add(hero.missiles,make_missile(hero.x+8,hero.y+2,1,3,0))
+	end
+	if(btn(5)) fade=true
+ -- missiles
+	foreach(hero.missiles,function(m) 
+		update_missiles(m)
+	end)
+	-- smoke
+	if(timer%2==0)then
+		foreach(hero.smoke,function(s)
+			if((s.r==1)or(s.r>5))then 
+				if(flr(rnd(5))==2)then
+					s.x=hero.x-3;s.y=hero.y+3;s.r=4
+				else
+					s.x=hero.x-2;s.y=hero.y+3;s.r=3
+				end
+			else 
+				if(s.r<4)then s.x-=2.6;s.r-=.5
+				else s.x-=3.6;s.r+=.1 end
+			end
+		end)
+	end
+end
+
+function draw_hero()
+	pal()
+	-- smoke
+	fillp(23130.5)
+	foreach(hero.smoke,function(s)
+		if(s.r>3)then circfill(s.x,s.y,s.r,5)
+		else circfill(s.x,s.y,s.r,7+s.r)
+		end
+		end)
+	fillp()
+	-- aircraft
+	spr(1,camx+hero.x,camy+hero.y)
+	-- missiles	
+	foreach(hero.missiles,draw_missiles)
 end
 
 __gfx__
@@ -1272,4 +1290,5 @@ a8a91a60616263640000000000000000000000000000000000000000000000000000000000000000
 000000a3a4a5a4a3a500a5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000009c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-00010000197501d7601f77021770217701f7701d7601b760177600006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000f00002434300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010300001e650236502a65033650336502e650296502f650256501d65016650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
