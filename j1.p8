@@ -30,6 +30,7 @@ level="title"
 -- score
 score=0
 miss={}
+c_missclock=20
 
 camx,camy=0,0
 uborder=10
@@ -63,11 +64,11 @@ tr,scale,angle=0,1,1
 -- init --
 function _init()
 	make_hero()
-	--_update=update_title
-	--_draw=draw_title
-	_update=update_game
-	_draw=draw_game
-	level="l1"
+	_update=update_title
+	_draw=draw_title
+	--_update=update_game
+	--_draw=draw_game
+	--level="l1"
 	--evtindex=1
 	--timer=0--1270--1999--800
 	debug=1
@@ -157,7 +158,8 @@ function draw_game()
 	print("score "..flr(score),camx+10,camy+3,7)
 	foreach(miss,function(m)
 		if(m.clock>0)then
-		 print("oh no!",m.x,m.y)
+		 print("-10",camx+34,camy+1+c_missclock-m.clock)
+		 print("oh no!",camx+m.x,camy+m.y)
    m.clock-=1
   else
    del(miss,m)
@@ -191,6 +193,17 @@ function draw_game()
 end
 
 ---------------
+-- manage score
+function manage_score(e)
+ newmiss={}
+ newmiss.x=e.x+10
+ newmiss.y=e.y
+ newmiss.clock=c_missclock
+ add(miss,newmiss)
+ if(score>10) score-=10
+end
+
+---------------
 -- starfield --
 function draw_starfield()
 	foreach(str,
@@ -204,24 +217,16 @@ function draw_starfield()
 		end)
 end
 
----------------
--- manage score
-function manage_score(e)
- newmiss={}
- newmiss.x=e.x+10
- newmiss.y=e.y
- newmiss.clock=20
- add(miss,newmiss)
-end
-
 ------------------
 --  screen --
 ------------------
 function update_title()
  if(btn(4))then
-  _update=update_game
-  _draw=draw_game
-	 level="l1"
+  _update=update_intro_lvl1
+  _draw=draw_intro_lvl1
+  --_update=update_game
+  --_draw=draw_game
+	 level="il1"
 	 timer=0
 	end 
 end
@@ -250,47 +255,6 @@ function draw_title()
  --map(3,4,camx+40,camy+40,5,2)
 	print("made with love by mcnanana",camx+15,camy+80,6)
 	print("press ❎",camx+40,camy+90,6) 
-end
-
-
--- intro_lvl --
-function update_intro_lvl1()
-	if(t>160)then
- 	hero.x+=8
- 	if(t%4==0) add(explosions,make_expl(290-rnd(14),80-rnd(8),10+rnd(4)-3))
- elseif(t>120)then
-  camx+=4
-  hero.x+=3.9
- elseif(t>90)then
-  camx+=2
-  hero.x+=2
-	elseif(t>50)then
-  camx+=1
-  hero.x+=1
-	end
-end
-
-function draw_intro_lvl1()
-	if(((t%40)==0)or((t%44)==0))then
-	 pal(11,8)
-	 pal(7,8)
-	else
-		palt(11,true)
-		pal(7,5)
-	end
-	local offset
-	for i=0,38 do
-		offset=1+i*8
-		if((offset>camx)and(offset<camx+128))	spr(32,offset,80)
-	end
-	for i=0,10 do
-		spr(64,1+i*8,64)
-		spr(80,1+i*8,72)
-	end
-	if(camx+64>249) spr(33,313,80)
- if(t>200) fadeout()
-	if(t>160) foreach(explosions,draw_expl)	
-	camera(camx,camy)
 end
 
 -----------
@@ -677,6 +641,47 @@ function draw_lvl1()
 	end
 end
 
+-- intro_lvl --
+function update_intro_lvl1()
+	timer+=1
+	
+	if(timer<30)then
+	 hero.x=10
+	else
+	 camx+=1
+	end
+	hero.y=44
+	camera(camx,camy)
+	--[[			if(b.x<-23) b.x=127
+
+	if(t>160)then
+ 	hero.x+=8
+ 	if(t%4==0) add(explosions,make_expl(290-rnd(14),80-rnd(8),10+rnd(4)-3))
+ elseif(t>120)then
+  camx+=4
+  hero.x+=3.9
+ elseif(t>90)then
+  camx+=2
+  hero.x+=2
+	elseif(t>50)then
+  camx+=1
+  hero.x+=1
+	end]]
+end
+
+function draw_intro_lvl1()
+	cls()
+	for x=0,128,8 do
+	 if(x<camx-8) x+=(128*(flr(camx/128)))
+	 spr(32,x,50)
+	end
+	if(timer%30<10)then
+	 pal(11,3)
+	 pal(7,11)
+	else
+	 pal()
+	end 
+end
 
 -- level 2 --
 function init_lvl2()
@@ -761,15 +766,15 @@ function update_enemies(e)
 	end
 	
  if(e.x<-7)or(e.life<1)then
-	 --outside screen
- 	e.status=0
  	--dead
  	if(e.life==0)then
  		make_expl(e.x,e.y)
  		e.life-=1
- 	else
+ 	elseif(e.status==1)then
  	 manage_score(e)
  	end	
+	 --outside screen
+ 	e.status=0
  	if(#e.missiles==0) del(enemies,e)
  else
 		--shooting and moving
