@@ -64,13 +64,13 @@ tr,scale,angle=0,1,1
 -- init --
 function _init()
 	make_hero()
-	_update=update_title
+ _update=update_title
 	_draw=draw_title
 	--_update=update_game
 	--_draw=draw_game
 	--level="l1"
-	--evtindex=1
-	--timer=0--1270--1999--800
+	--evtindex=7
+	--timer=1200--1270--1999--800
 	debug=1
 
 	if(level=="title")then
@@ -152,7 +152,9 @@ function draw_game()
 	pal()
 	foreach(expl,draw_expl)
 	-- border
-	rectfill(camx,0,camx+127,uborder,8)
+	rectfill(camx,0,camx+127,uborder,5)
+	--spr(75,camx,camy)
+	--spr(77,camx+120,camy)
 	rectfill(camx,128-bborder,camx+127,127,5)
 	-- printing
 	print("score "..flr(score),camx+10,camy+3,7)
@@ -200,7 +202,8 @@ function manage_score(e)
  newmiss.y=e.y
  newmiss.clock=c_missclock
  add(miss,newmiss)
- if(score>10) score-=10
+ score-=10
+ if(score<0) score=0
 end
 
 ---------------
@@ -245,16 +248,15 @@ function draw_title()
 		for i=0,39 do
 			c=sget(i,48+j)
 			if((c==7)and(c1!=0))then
-				pset(40+i,40+j,c1)
+				pset(50+i,40+j,c1)
 			elseif((c==8)and(c2!=0))then
-				pset(40+i,40+j,c2)
+				pset(50+i,40+j,c2)
 			end
   end
  end
  timerts+=.6
- --map(3,4,camx+40,camy+40,5,2)
 	print("made with love by mcnanana",camx+15,camy+80,6)
-	print("press ❎",camx+40,camy+90,6) 
+	print("press a button",camx+40,camy+90,6) 	
 end
 
 -----------
@@ -400,9 +402,9 @@ evtlevel1={
 										100,280,460,640,-- wave4
 										1000,-- expl(6)
 										1280, -- wave5
-										1340, -- wave6()
-										1710, -- wave7
-										2040 --(10)
+										1480, -- wave6()
+										1910, -- wave7
+										2240 --(10)
 										}
 evtindex=1
 evtexpl=6	
@@ -436,7 +438,6 @@ function init_lvl1(step)
 							}					
 	elseif(step==2)then -- wave 1
 		starting=false
-		--add(enemies,make_enemies(3,128,70,1,1))
 		add(enemies,make_enemies(1,128,70))
 	elseif(step==3)then -- wave 2
 		add(enemies,make_enemies(1,127,40))
@@ -451,8 +452,13 @@ function init_lvl1(step)
 		add(enemies,make_enemies(1,140,95))
 		add(enemies,make_enemies(1,153,35))
 	elseif(step==7)then -- wave 5
-		add(enemies,make_enemies(3,130,30))
-		add(enemies,make_enemies(1,128,90))
+		add(enemies,make_enemies(1,130,50))
+		add(enemies,make_enemies(1,142,30))
+		add(enemies,make_enemies(1,154,45))
+		add(enemies,make_enemies(1,166,60))
+		add(enemies,make_enemies(1,178,75))
+		add(enemies,make_enemies(1,190,90))
+		add(enemies,make_enemies(1,202,110))
 	elseif(step==8)then -- wave 6
  	add(enemies,make_enemies(2,100,40))
  	add(enemies,make_enemies(2,120,40))
@@ -461,11 +467,10 @@ function init_lvl1(step)
  	add(enemies,make_enemies(2,180,40))
  	add(enemies,make_enemies(2,200,40))
 	elseif(step==9)then -- wave 7
-		add(enemies,make_enemies(3,130,25))
-		add(enemies,make_enemies(3,130,105))
-		add(enemies,make_enemies(1,138,60))
-		add(enemies,make_enemies(1,138,75))
-		add(enemies,make_enemies(1,138,90))
+		add(enemies,make_enemies(3,148,70))
+		add(enemies,make_enemies(1,130,60))
+		add(enemies,make_enemies(1,130,75))
+		add(enemies,make_enemies(1,130,90))
 	elseif(step==10)then
  	-- boss buildings
 		add(background,{x=160,y=106,velx=2.2,t=10})
@@ -577,7 +582,7 @@ function draw_lvl1()
 	 end	
   if(timer<evtlevel1[evtexpl])then
 	 -- launching ships	
-		 if(timer%120==1)then
+		 if(timer%110==1)then
 	 	 rad=3
 	 	 ss[5]=0
 	 	 ss[6]=ss[4]+2
@@ -602,7 +607,7 @@ function draw_lvl1()
 	  fillp(0b0101101001011010.1)
 	  circfill(ss[1],ss[2]+4,rad,6)
 	  fillp()
-	  ss[5]-=.3;ss[6]-=.4;rad-=.05
+	  ss[5]-=.3;ss[6]-=.4;rad-=.04
 	 end
 	end
 	-- background
@@ -670,9 +675,15 @@ function update_intro_lvl1()
 end
 
 function draw_intro_lvl1()
+	local x
 	cls()
-	for x=0,128,8 do
-	 if(x<camx-8) x+=(128*(flr(camx/128)))
+	print(camx,camx+50,20,7)
+	for i=0,136,8 do
+  if(i+8<camx%128)then
+  	x=i+(128*(flr(camx/128)+1))
+  else
+   x=i+(128*(flr(camx/128)))
+  end
 	 spr(32,x,50)
 	end
 	if(timer%30<10)then
@@ -731,7 +742,7 @@ function make_enemies(te,x,y)
 	enemy.animation=1 -- anim ou jeu
 	enemy.anim_begin=0 -- debut d'anim
 	enemy.status=1 -- jouable
-	enemy.shoot=0 
+	enemy.shoot=0 -- a virer !!!! 
 	enemy.hit=0 -- is enemy hit ?
 	enemy.life=1 -- life
 	if(te==1)then
@@ -802,7 +813,7 @@ function update_enemies(e)
 	  	e.y=64+sin((52+timer-e.anim_begin)/200)*24 
 	 	end	
 		elseif(e.t==3)then
-			e.x-=1
+			e.x-=.6
 			if((e.x<124)and(#e.missiles==0))then
 				e.shoot=1
 				add(e.missiles,make_missile(e.x-7,e.y+2,0.5,2,2))
@@ -860,12 +871,12 @@ function draw_enemies(e)
 		else
 			-- affichage standard
 			spr(e.sprite,camx+e.x,camy+e.y)
-			if(e.shoot>0)then
+			--[[if(e.shoot>0)then
 			 circfill(e.x+1,e.y+5,1-e.shoot,2)
 			 circfill(e.x+3,e.y+6,2-e.shoot,14)
 			 circfill(e.x+5,e.y+4,1-e.shoot,2)
 			 e.shoot-=.1
-			end
+			end]]
 		end
 	end
 	
@@ -933,6 +944,10 @@ function draw_expl(e)
 end
 
 -->8
+c_m_animate=10
+c_p_color={2,14,15}
+c_p_h_color={9,10,7}
+
 --------------
 -- missiles --
 -- 0:hero
@@ -941,8 +956,8 @@ end
 -- 3:manic
 function make_missile(x,y,a,s,t)
 	m={}
-	m.x=x;m.sx=x
-	m.y=y;m.sy=y
+	m.x=x;m.y=y
+	m.sx=x;m.sy=y -- for hero
 	m.angle=a
 	m.speed=s
 	m.width=8
@@ -952,15 +967,32 @@ function make_missile(x,y,a,s,t)
 		m.height=4
 	end	
 	m.t=t
-	m.it=timer
+	m.clock=timer -- for homein
 	m.status=1
-	if(m.t==0) sfx(0)
+	if(m.t==0)then
+ 	m.animate={x=m.x,y=m.y+m.height/2,r=2,c=0}
+	 sfx(0)
+	else
+ 	m.animate={x=m.x+m.width,y=m.y+m.height/2,r=2,c=0}
+	end
 	return m
 end
 
 function update_missiles(m)
+ if((timer<m.clock+c_m_animate)and(timer%2==0))then
+  m.animate.x+=rnd(2)-1
+  m.animate.y+=rnd(2)-1
+  m.animate.r-=.2
+  if(m.t==0)then
+  	m.animate.c=c_p_h_color[flr(rnd(3)+1)]  
+  else
+  	m.animate.c=c_p_color[flr(rnd(3)+1)]
+  end
+ end
+ 
 	if(m.t==0)then
 		m.x+=3
+		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
 		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
 	elseif(m.t==1)then
 		if(m.x<0)then
@@ -970,7 +1002,7 @@ function update_missiles(m)
 		--m.y+=sin(m.angle)
 		end
 	elseif(m.t==2)then -- homein
-	 if(timer-m.it>200)then 
+	 if(timer-m.clock>200)then 
 	  m.status=0 --del
 	 else
 			local vecx=cos(m.angle)
@@ -1000,17 +1032,18 @@ function draw_missiles(m)
 		spr(5,camx+m.x,camy+m.y)
 	elseif(m.t==2)then
 		draw_rotation(m.x,m.y,m.angle,48,8)
-	 print(m.x..", "..m.angle,2,25,7)
-		--[[circfill(m.x,m.y,4,2)
-		circfill(m.x,m.y,3,14)
-		if (timer%5<3) pal(15,14)
-		circfill(m.x,m.y,2,15)
-		pal()
-		line(m.x+4*cos(m.angle),m.y+4*sin(m.angle),
-		m.x,m.y,8)]]
 	elseif(m.t==3)then
 	 spr(36,camx+m.x,camy+m.y)
 	end	
+	
+ if(timer<m.clock+c_m_animate) circ(m.animate.x,m.animate.y,m.animate.r,m.animate.c)
+	--[[foreach(m.animate,function(a)
+	 if(timer<a.clock+c_p_animate)then
+	  circ(a.x,a.y,a.r,a.c)
+	 else
+	  del(m.animate,a)
+	 end 
+	end)]]
 end
 
 -->8
@@ -1115,14 +1148,14 @@ __gfx__
 9a7777a9009aa90000000000000000002ee77ee2000000000000000002bb32000000000000000000eeeeeeee0000000000000000000000000000000000000000
 09aaaa9000099000000000000000000002eeee20000000000000000002bf32000000000000000000eeeeeeee0000000000000000000000000000000000000000
 009999000000000000000000000000000022220000000000000000000b2223000000000000000000000000000000000000000000000000000000000000000000
-7000700070777707777077070777077070077707888088808080888000880808088808887000777007700007a984440000000000000000000000000000000000
-00078707878888788887887878887887877888708000808088808000080808080800080807078887788700709884000000000000000000000000000000000000
-00078777878778787787878877877878878777008080808080808800080808080880088800787777877870008844000000000000000000000000000000000000
-00078787878888788887877877877877878788708080888080808000080808080800088077787887877877708400000000000000000000000000000000000000
-00078787878778787877877877877877878778708880808080808880088000800888080800787787877870078400000000000000000000000000000000000000
-07007808778078787787877878887877877887000800800000800080080000000008000800078887788707008844000000000000000000000000000000000000
-78700707007007070070700707770700700770070800800000800000000000000008000007007770077000709884000000000000000000000000000000000000
-07000000000000000000000000000000000000700000800008880080000000000000000870000000000000079984440000000000000000000000000000000000
+70007000707777077770770707770770700777078880888080808880008808080888088870007770077000070000555555555555555500000000000000000000
+00078707878888788887887878887887877888708000808088808000080808080800080807078887788700700055cc6666666666666655000000000000000000
+0007877787877878778787887787787887877700808080808080880008080808088008880078777787787000056c7000000000000007c6500000000000000000
+000787878788887888878778778778778787887080808880808080000808080808000880777878878778777067c700000000000000007c760000000000000000
+00078787878778787877877877877877878778708880808080808880088000800888080800787787877870075666000000000000000066650000000000000000
+07007808778078787787877878887877877887000800800000800080080000000008000800078887788707000555600000000000000655500000000000000000
+78700707007007070070700707770700700770070800800000800000000000000008000007007770077000700055555555555555555555000000000000000000
+07000000000000000000000000000000000000700000800008880080000000000000000870000000000000070000555555555555555500000000000000000000
 0000000012489999999999a77a999999999984210000000000666600000660000666660006666600060006600666666069999990999999906999996069999960
 00000000000000000000000000000000000000000000000006999960006996006999996069999960696069966999999699600000000069909960699099606990
 00000000228888888888eeeffeee88888888882200000000699669966999960006666996066669966960699669966660aaaaaa700007aa707aaaaa707aaaaaa0
