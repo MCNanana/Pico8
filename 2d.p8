@@ -1,0 +1,75 @@
+pico-8 cartridge // http://www.pico-8.com
+version 27
+__lua__
+t=0
+
+function _init()
+	init_blob()
+end
+
+function _update()
+	t+=.01
+	update_blob()
+end
+
+function _draw()
+	draw_blob()
+end
+-->8
+balls={}
+pal={4,9,10}
+min_threshold = 0.9
+med_threshold = 1.2
+max_threshold = 1.4
+
+function add_ball(x,y,r,sx,sy)
+	metaball={}
+	metaball.x=x
+	metaball.y=y
+	metaball.radius=r
+	metaball.speedx=sx
+	metaball.speedy=sy 
+	return metaball
+end
+
+function equation(b,x,y)
+	dx=x-b.x
+	dy=y-b.y 
+ return (b.radius/sqrt(dx*dx+dy*dy))
+end
+
+function init_blob()
+	add(balls,add_ball(20,20,10,2,3))
+end
+
+function update_blob()
+
+end
+
+function draw_blob()
+ local sum
+ for y=0,127 do 
+  for x=0,127 do 
+  	sum=0
+  	for i=1,#balls do 
+  		sum+=equation(balls[i],x,y)
+  		local col
+  		if(sum>max_threshold)then
+  			col=3
+  		elseif(sum>med_threshold)then
+  			col=2
+  		elseif(sum>min_threshold)then
+  			col=1
+  		end
+  		pset(x,y,pal[col])
+  	end
+ 	end
+	end
+end 
+__gfx__
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
