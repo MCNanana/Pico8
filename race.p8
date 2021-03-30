@@ -39,19 +39,22 @@ function _draw()
 	cls()
 	clip(0,0,128,128-clipping)
 	circuit:draw()
+	
 	car:draw()
 	
-	print(circuit0[1][4],cam.x+2,cam.y+30,7)
 	--circuit:where_am_i(car.x,car.y)
 
+	cam:draw()
 	clip()
 	print_speed()
 
 	if(debug==1)then
 		print("a:"..car.angle.." s:"..car.speed,cam.x+2,cam.y+1,7)
 		print("x:"..car.x.." y:"..car.y,cam.x+2,cam.y+9,7)
+		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
 		--print("xos:"..car.xos.." yos:"..car.yos,cam.x+2,cam.y+17,7)
-		--print(cam.x..", "..cam.y,cam.x+2,cam.y+16,7)
+	 print(car.arc.."-"..car.dy,cam.x+2,cam.y+30,7)
+	 --print(#circuit.checkpoints,cam.x+2,cam.y+36,7)
 	 print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
 	 print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
 	end
@@ -83,12 +86,13 @@ car={
 	model=0,
 	player=false,
 	cchkpnt=0,
-	x=64,y=64, -- real coordinates
+	x=100,y=260, -- real coordinates
 	--xos=0,yos=0, -- coordinates on tile
 	angle=.75,speed=1,
 	accelerate=false,brake=false,
 	asphalt=1, -- is the car on the asphalt ?
 	hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
+	arc=0,dx=0,dy=0,
 	-- animations
 	crashing=false,
 	rotation=.75, -- crash animation
@@ -149,6 +153,7 @@ function car:speed_variation()
  return sum/nb
 end
 ]]
+
 function car:debug(x,y,s)
 	if(debug_car==1)then
 	 -- bounding box
@@ -167,9 +172,13 @@ function car:debug(x,y,s)
 	end	
 end
 
-function car:ia_update(c)
-	--
-	--c.x+=1
+function car:ia_update()
+	local c=self
+	c.dx=c.x-circuit.checkpoints[c.cchkpnt+1].x
+	c.dy=c.y-circuit.checkpoints[c.cchkpnt+1].y
+	c.arc=atan2(c.dx,c.dy)
+	
+	--if(c
 end
 
 function car:player_update()
@@ -295,7 +304,7 @@ circuit={
 	x=0,y=0,-- on the spritesheet - px
 	width=0,heigh=0,-- on the spritesheet - px
 	realwifdth=0,realheigh=0, -- on screen - px
-	checkpoints={},
+	checkpoints,
 	}
 	
 function circuit:init(m)
@@ -305,6 +314,7 @@ function circuit:init(m)
   self.x,self.y=0,32
   self.width,self.heigh=24,16
   self.realwidth,self.realheigh=1280,640
+  self.checkpoints=circuit0
   --add(self.checkpoints,checkpoint_init(60,80,40,70,20,20))
  end
 end
@@ -369,7 +379,7 @@ function circuit:draw()
 			local col=sget(i,j)
 			draw_tile(i-self.x,j-self.y,col)
   	-- draw checkpoints
-	 	if(debug==1)then
+	 	--[[if(debug==1)then
 	 		local checkpoint
 				--print(checkpoints[k],cam.x+30,cam.y+30,7)
 				--print("",cam.x+30,cam.y+40,7)
@@ -380,9 +390,16 @@ function circuit:draw()
 	 			end
 	 		end
  			--foreach(self.checkpoints,checkpoint_draw)
- 		end
+ 		end]]
 		end
  end
+ --
+ if(debug==1) foreach(self.checkpoints,drawchk)
+end
+
+function drawchk(t)
+ --print(t.x..", "..t.y..", ",cam.x+2,cam.y+40,8)
+ circ(t.x,t.y,3,8)
 end
 
 ----------------
@@ -400,6 +417,14 @@ checkpoints={
 	{c=8,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- up slope
 	{c=9,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- down slope
 	}
+-- index,x,y,speed
+circuit0={
+ {i=1,x=100,y=250,p="a"},
+ {i=2,x=88,y=160,p="b"},
+ {i=3,x=115,y=115,p="a"},
+ {i=4,x=140,y=100,p="a"},
+ {i=5,x=300,y=120,p="n"}
+}
 
 function checkpoint_init(array)
 	checkpoint={
@@ -600,44 +625,17 @@ function cam:update()
 	self.x=car.x-self.initx+cos(car.angle)*self.pov
 	self.y=car.y-self.inity-sin(car.angle)*self.povclip
 end
+
+function cam:draw()
+	local x,y=self.x,self.y
+	if(debug==1)then
+		line(x-3,y,x+3,y,10)
+		line(x,y-3,x,y+3,10)
+	end
+end
 -->8
 -- circuits data
---
--- a b c  i j k  q r s     
--- h   d  p   l  x   t
--- g f e  o n m  w v u
 
-function make_chkpnt(i,x,y,v)
- local z
- 
- if(direction=="br")then
- 	z="u"
- elseif(direction=="bl")then
- 	z="w"
- elseif(direction=="l")then
- 	z="x"
- elseif(direction=="r")then
- 	z="t"
- elseif(direction=="tl")then
- 	z="q"
- elseif(direction=="tr")then
- 	z="s"
- end 
-
-	vectors={
- 	{z,z,z,z,z},
- 	{z,z,z,z,z},
- 	{z,z,z,z,z},
- 	{z,z,z,z,z},
- 	{z,z,z,z,z}
- }
- 
- return vectors
-end
-
-circuit0={
- {0,70,80,"a"},
-}
 
 
 --[[
