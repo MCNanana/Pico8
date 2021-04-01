@@ -28,11 +28,6 @@ function _update()
 	--if(car.angle<.50) povclip=cam.pov+clipping
 	
 	cam:update()
-	if(car.x<cam.initx-cos(car.angle)*cam.pov) cam.x=0
-	if(car.x>circuit.realwidth-cam.initx-cos(car.angle)*cam.pov)	cam.x=circuit.realwidth-128
-	if(car.y<cam.inity+sin(car.angle)*cam.povclip) cam.y=0
-	if(car.y>circuit.realheigh-cam.inity+sin(car.angle)*cam.povclip+clipping) cam.y=circuit.realheigh-128+clipping
-	camera(cam.x,cam.y)
 end
 
 function _draw()
@@ -53,7 +48,7 @@ function _draw()
 		print("x:"..car.x.." y:"..car.y,cam.x+2,cam.y+9,7)
 		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
 		--print("xos:"..car.xos.." yos:"..car.yos,cam.x+2,cam.y+17,7)
-	 print(car.arc.."-"..car.dy,cam.x+2,cam.y+30,7)
+	 print(car.arc.."-"..car.angle.."-"..car.cchkpnt,cam.x+2,cam.y+30,7)
 	 --print(#circuit.checkpoints,cam.x+2,cam.y+36,7)
 	 print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
 	 print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
@@ -84,9 +79,9 @@ cars={}
 
 car={
 	model=0,
-	player=false,
+	player=true,
 	cchkpnt=0,
-	x=100,y=260, -- real coordinates
+	x=100,y=280, -- real coordinates
 	--xos=0,yos=0, -- coordinates on tile
 	angle=.75,speed=1,
 	accelerate=false,brake=false,
@@ -138,7 +133,7 @@ function car:draw()
  --print(#self.part,50,50,7)
 	--car:speed_variation()
 	
- --car:debug(self.x,self.y,self.speed)	
+ car:debug()	
 end
 
 --[[
@@ -154,13 +149,17 @@ function car:speed_variation()
 end
 ]]
 
-function car:debug(x,y,s)
+function car:debug()
+	local x,y,s=self.x,self.y,self.speed
 	if(debug_car==1)then
-	 -- bounding box
-	 --rect(x-self.hbl,y-self.hbt,x+self.hbr,y+self.hbb,7)
+		-- origins
+		line(x-2,y,x+2,y,10)
+		line(x,y-2,x,y+2,10)
 		-- vector 
 		line(x,y,x+cos(self.angle)*s*3,y-sin(self.angle)*s*3,7)
 		circ(x+cos(self.angle)*s*3,y-sin(self.angle)*s*3,1,10)
+	 -- bounding box
+	 --rect(x-self.hbl,y-self.hbt,x+self.hbr,y+self.hbb,7)
 		--  
 		rectfill(cam.x+64,cam.y+64,cam.x+71,cam.y+71,12)
 	 -- hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
@@ -174,11 +173,30 @@ end
 
 function car:ia_update()
 	local c=self
-	c.dx=c.x-circuit.checkpoints[c.cchkpnt+1].x
-	c.dy=c.y-circuit.checkpoints[c.cchkpnt+1].y
+	-- angle
+	c.dx=c.x-circuit.chkpnts[c.cchkpnt+1].x
+	c.dy=c.y-circuit.chkpnts[c.cchkpnt+1].y
 	c.arc=atan2(c.dx,c.dy)
-	
-	--if(c
+	if(c.arc<c.angle)then c.angle-=.01
+	elseif(c.arc>c.angle)then c.angle+=.01 
+	end
+	--distance
+	local dist=sqrt(c.dx*c.dx+c.dy*c.dy)
+ if(dist<10)then
+ 	c.cchkpnt+=1 
+ 	if(c.cchkpnt+1>=#circuit.chkpnts)then
+ 	 c.cchkpnt=0
+ 	end 
+ end
+ -- speed
+ if(circuit.chkpnts[c.cchkpnt+1].p=="a")then
+  c.speed=.4--+=.1
+ elseif(circuit.chkpnts[c.cchkpnt+1].p=="b")then 
+  c.speed=.4---=.2
+	end
+	-- new coordinates
+	c.x+=cos(c.angle)*c.speed
+	c.y-=sin(c.angle)*c.speed
 end
 
 function car:player_update()
@@ -209,7 +227,7 @@ function car:player_update()
 		end
 		if (btn(5))then -- brake
 			nokeys=false
-			if(self.speed>0) self.brake=true
+			if(self.speed>0) self.b0000r0a0000000ke=true
 		 if(self.speed>-.4) self.speed-=.2
 		end
 		-- other
@@ -304,7 +322,7 @@ circuit={
 	x=0,y=0,-- on the spritesheet - px
 	width=0,heigh=0,-- on the spritesheet - px
 	realwifdth=0,realheigh=0, -- on screen - px
-	checkpoints,
+	chkpnts,
 	}
 	
 function circuit:init(m)
@@ -313,8 +331,8 @@ function circuit:init(m)
  if(self.model==0)then
   self.x,self.y=0,32
   self.width,self.heigh=24,16
-  self.realwidth,self.realheigh=1280,640
-  self.checkpoints=circuit0
+  self.realwidth,self.realheigh=960,640
+  self.chkpnts=circuit0
   --add(self.checkpoints,checkpoint_init(60,80,40,70,20,20))
  end
 end
@@ -394,7 +412,7 @@ function circuit:draw()
 		end
  end
  --
- if(debug==1) foreach(self.checkpoints,drawchk)
+ if(debug==1) foreach(self.chkpnts,drawchk)
 end
 
 function drawchk(t)
@@ -624,6 +642,20 @@ function cam:update()
 
 	self.x=car.x-self.initx+cos(car.angle)*self.pov
 	self.y=car.y-self.inity-sin(car.angle)*self.povclip
+
+	if(car.x<self.initx-cos(car.angle)*self.pov)then 
+		self.x=0
+	end
+	if(car.x>circuit.realwidth-self.initx-cos(car.angle)*self.pov)then	
+		self.x=circuit.realwidth-128
+	end
+	if(car.y<self.inity+sin(car.angle)*self.povclip)then 
+		self.y=0
+	end
+	if(car.y>circuit.realheigh-self.inity+sin(car.angle)*self.povclip+clipping)then 
+		self.y=circuit.realheigh-128+clipping
+	end
+	camera(self.x,self.y)
 end
 
 function cam:draw()
