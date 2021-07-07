@@ -45,14 +45,13 @@ function _draw()
 
 	if(debug==1)then
 		print("a:"..car.angle.." s:"..car.speed,cam.x+2,cam.y+1,7)
+	 print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
+	 print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
 		print("x:"..car.x.." y:"..car.y,cam.x+2,cam.y+9,7)
 		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
 		--print("xos:"..car.xos.." yos:"..car.yos,cam.x+2,cam.y+17,7)
-	 print(car.arc.."-"..car.angle.."-"..car.cchkpnt,cam.x+2,cam.y+30,7)
-	 print(car.dx.."-"..car.dy,cam.x+2,cam.y+40,7)
+	 print(circuit.chkpnts[car.cchkpnt+1].x.."-"..circuit.chkpnts[car.cchkpnt+1].y.." - "..car.cchkpnt.." - "..car.arc,cam.x+2,cam.y+30,7)
 	 --print(#circuit.checkpoints,cam.x+2,cam.y+36,7)
-	 print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
-	 print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
 	end
 end
 
@@ -126,7 +125,6 @@ end
 ------------
 function car:draw()
 	local x,y=self.x,self.y
-	local s=self.speed
 
 	draw_rotation(x,y,self)
 	pal()
@@ -160,8 +158,8 @@ function car:debug()
 		-- vector 
 		--line(x,y,x+cos(self.angle)*s*3,y-sin(self.angle)*s*3,7)
 		--circ(x+cos(self.angle)*s*3,y-sin(self.angle)*s*3,1,10)
-		line(x,y,x+sin(self.angle)*s*5,y+cos(self.angle)*s*5,7)
-		circ(x+sin(self.angle)*s*5,y+cos(self.angle)*s*5,1,10)
+		line(x,y,x+cos(self.angle)*s*5,y-sin(self.angle)*s*5,7)
+		circ(x+cos(self.angle)*s*5,y-sin(self.angle)*s*5,1,10)
 	 -- bounding box
 	 --rect(x-self.hbl,y-self.hbt,x+self.hbr,y+self.hbb,7)
 		--  
@@ -179,39 +177,45 @@ function car:ia_update()
 	local c=self
 	local dx,dy,arc
 	-- angle
-	c.dx=circuit.chkpnts[c.cchkpnt+1].x
-	c.dy=circuit.chkpnts[c.cchkpnt+1].y
+	--c.dx=circuit.chkpnts[c.cchkpnt+1].x
+	--c.dy=circuit.chkpnts[c.cchkpnt+1].y
 	dx=circuit.chkpnts[c.cchkpnt+1].x-c.x
 	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
-	arc=atan2(dy,dx)
+	arc=atan2(dx,-dy)
 	if(arc<c.angle)then c.angle-=.01
 	elseif(arc>c.angle)then c.angle+=.01 
 	end
 	c.angle=arc
-	c.arc=arc
+	c.rotation=arc
 
  -- speed
- --c.speed=.8
- if(circuit.chkpnts[c.cchkpnt+1].p=="a")
+ c.speed=1
+ --[[if(circuit.chkpnts[c.cchkpnt+1].p=="a")
  	and(c.speed<4.4)then
   c.speed+=.1
  elseif(circuit.chkpnts[c.cchkpnt+1].p=="b")
  	and(c.speed>0)then
   c.speed-=.2
-	end
+	end]]
 	
 	-- new coordinates
-	--c.x+=cos(c.angle)*c.speed
-	c.x+=sin(c.angle)*c.speed
-	--c.y-=sin(c.angle)*c.speed
-	c.y+=cos(c.angle)*c.speed
+	c.x+=cos(c.angle)*c.speed
+	--c.x+=sin(c.angle)*c.speed
+	c.y-=sin(c.angle)*c.speed
+	--c.y+=cos(c.angle)*c.speed
 	--distance
-	local dist=sqrt(dx*dx+dy*dy)
- if(dist<20)then
+	local dist
+	if(abs(dx)>100)or(abs(dy)>100)then
+		dist=50
+	else
+		dist=sqrt(dx*dx+dy*dy)
+ end
+ c.arc=dist
+ if(dist<10)then
 		c.cchkpnt+=1 
- 	if(c.cchkpnt>=#circuit.chkpnts)then
- 	 c.cchkpnt=0
- 	end 
+ 	--if(c.cchkpnt>=#circuit.chkpnts)then
+ 	-- c.cchkpnt=0
+ 	--end 
  end
 end
 
@@ -439,7 +443,7 @@ end
 ----------------
 -- checkpoint --
 ----------------
-checkpoints={
+--[[checkpoints={
 	{c=0,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- grass
 	{c=1,ax=19,ay=19,bx=0,by=16,bw=40,bh=8},-- verticaly
 	{c=2,ax=19,ay=19,bx=16,by=0,bw=8,bh=40},-- horizontaly
@@ -450,14 +454,17 @@ checkpoints={
 	{c=7,ax=19,ay=19,bx=0,by=16,bw=40,bh=8},--start line
 	{c=8,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- up slope
 	{c=9,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- down slope
-	}
+	}]]
 -- index,x,y,speed
 circuit0={
  {i=1,x=100,y=250,p="a"},
  {i=2,x=88,y=160,p="a"},
  {i=3,x=115,y=115,p="b"},
  {i=4,x=140,y=100,p="a"},
- {i=5,x=300,y=120,p="n"}
+ {i=5,x=300,y=120,p="n"},
+ {i=6,x=430,y=120,p="a"},
+ {i=7,x=800,y=85,p="a"},
+ {i=8,x=820,y=125,p="a"}, 
 }
 
 function checkpoint_init(array)
@@ -656,12 +663,12 @@ cam={
 function cam:update()
 	--if(car.angle<.50) self.povclip=self.pov+clipping
 
-	--self.x=car.x-self.initx+cos(car.angle)*self.pov
-	--self.y=car.y-self.inity-sin(car.angle)*self.povclip
-	self.x=car.x-self.initx+sin(car.angle)*self.pov
-	self.y=car.y-self.inity+cos(car.angle)*self.povclip
+	self.x=car.x-self.initx+cos(car.angle)*self.pov
+	self.y=car.y-self.inity-sin(car.angle)*self.povclip
+	--self.x=car.x-self.initx+sin(car.angle)*self.pov
+	--self.y=car.y-self.inity+cos(car.angle)*self.povclip
 
-	--[[if(car.x<self.initx-cos(car.angle)*self.pov)then 
+	if(car.x<self.initx-cos(car.angle)*self.pov)then 
 		self.x=0
 	end
 	if(car.x>circuit.realwidth-self.initx-cos(car.angle)*self.pov)then	
@@ -672,7 +679,7 @@ function cam:update()
 	end
 	if(car.y>circuit.realheigh-self.inity+sin(car.angle)*self.povclip+clipping)then 
 		self.y=circuit.realheigh-128+clipping
-	end]]
+	end
 	camera(self.x,self.y)
 end
 
