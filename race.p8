@@ -12,7 +12,7 @@ function _init()
  camera()
 	circuit:init(0)
 	--init_oponents()
- car:init(false)
+ car:init(true)
 end
 
 function _update()
@@ -75,6 +75,7 @@ function print_speed()
 end
 -->8
 -- car
+ia_dist_cp=10
 cars={}
 
 car={
@@ -176,47 +177,48 @@ end
 function car:ia_update()
 	local c=self
 	local dx,dy,arc
+	dx=circuit.chkpnts[c.cchkpnt+1].x-c.x
+	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
+	--distance
+	local dist
+	if(abs(dx)>100)or(abs(dy)>100)then
+		dist=100
+	else
+		dist=sqrt(dx*dx+dy*dy)
+ end
+ if(dist<10)then
+		c.cchkpnt+=1 
+ 	if(c.cchkpnt>=#circuit.chkpnts)then
+ 	 c.cchkpnt=0
+ 	end 
+ end
 	-- angle
 	--c.dx=circuit.chkpnts[c.cchkpnt+1].x
 	--c.dy=circuit.chkpnts[c.cchkpnt+1].y
-	dx=circuit.chkpnts[c.cchkpnt+1].x-c.x
-	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
 	arc=atan2(dx,-dy)
-	if(arc<c.angle)then c.angle-=.01
-	elseif(arc>c.angle)then c.angle+=.01 
+	local diffangle=c.angle-arc
+	if(diffangle<-.49)then c.angle-=.01
+	elseif(diffangle<.01)then c.angle+=.01
+	elseif(diffangle<.51)then c.angle-=.01
+	else c.angle+=.01		
 	end
-	c.angle=arc
-	c.rotation=arc
-
+ --c.arc=arc--diffangle
+	c.angle=abs(c.angle%1)
+	--c.angle=arc
+	c.rotation=c.angle
  -- speed
- c.speed=1
- --[[if(circuit.chkpnts[c.cchkpnt+1].p=="a")
+ if(circuit.chkpnts[c.cchkpnt+1].p=="a")
  	and(c.speed<4.4)then
   c.speed+=.1
  elseif(circuit.chkpnts[c.cchkpnt+1].p=="b")
- 	and(c.speed>0)then
+ 	and(c.speed>.21)then
   c.speed-=.2
-	end]]
-	
+	end
 	-- new coordinates
 	c.x+=cos(c.angle)*c.speed
 	--c.x+=sin(c.angle)*c.speed
 	c.y-=sin(c.angle)*c.speed
 	--c.y+=cos(c.angle)*c.speed
-	--distance
-	local dist
-	if(abs(dx)>100)or(abs(dy)>100)then
-		dist=50
-	else
-		dist=sqrt(dx*dx+dy*dy)
- end
- c.arc=dist
- if(dist<10)then
-		c.cchkpnt+=1 
- 	--if(c.cchkpnt>=#circuit.chkpnts)then
- 	-- c.cchkpnt=0
- 	--end 
- end
 end
 
 function car:player_update()
