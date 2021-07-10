@@ -2,27 +2,30 @@ pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
 -- const
-debug=1
-debug_car=1
+debug=0
+debug_car=0
 --
 clipping=18 -- bordure du bas
 t=0 -- temps
 
+cars={}
+
 function _init()
- camera()
+ --camera()
 	circuit:init(0)
-	--init_oponents()
- car:init(true)
+ add(cars,make_car(false,100,290))
+ add(cars,make_car(false,110,295))
+ add(cars,make_car(false,100,310))
 end
 
 function _update()
  t+=1
 
 	-- cars
-	--cars	
+	for c in all(cars) do
 	-- player's car	
-	car:update()
-
+		car_update(c)
+	end
 	-- cam
 	--local povclip=cam.pov
 	--if(car.angle<.50) povclip=cam.pov+clipping
@@ -35,8 +38,10 @@ function _draw()
 	clip(0,0,128,128-clipping)
 	circuit:draw()
 	
-	car:draw()
-	
+	--print(#cars,cam.x+62,cam.y+61,7)
+	for c in all(cars) do
+		car_draw(c)
+	end
 	--circuit:where_am_i(car.x,car.y)
 
 	cam:draw()
@@ -49,9 +54,7 @@ function _draw()
 	 print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
 		print("x:"..car.x.." y:"..car.y,cam.x+2,cam.y+9,7)
 		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
-		--print("xos:"..car.xos.." yos:"..car.yos,cam.x+2,cam.y+17,7)
 	 print(circuit.chkpnts[car.cchkpnt+1].x.."-"..circuit.chkpnts[car.cchkpnt+1].y.." - "..car.cchkpnt.." - "..car.arc,cam.x+2,cam.y+30,7)
-	 --print(#circuit.checkpoints,cam.x+2,cam.y+36,7)
 	end
 end
 
@@ -76,13 +79,24 @@ end
 -->8
 -- car
 ia_dist_cp=10
-cars={}
 
+
+	
+--[[function car:init(player)
+	self.player=player
+ if(self.model==0)then
+ 	-- hero
+ 	self.sosx=8
+ 	--self.sosy=8
+ end
+end]]
+
+function make_car(player,x,y)
 car={
 	model=0,
-	player=true,
+	player=player,
 	cchkpnt=0,
-	x=100,y=290, -- real coordinates
+	x=x,y=y, -- real coordinates
 	--xos=0,yos=0, -- coordinates on tile
 	angle=.75,speed=1,
 	accelerate=false,brake=false,
@@ -101,40 +115,46 @@ car={
 	col=8,
 	}
 	
-function car:init(player)
-	self.player=player
- if(self.model==0)then
+ if(car.model==0)then
  	-- hero
- 	self.sosx=8
+ 	car.sosx=8
  	--self.sosy=8
  end
+ 
+ return car
 end
 
 ------------
 -- update --
 ------------
-function car:update()
- if(self.player==true)then
-		car:player_update()
+function car_update(c)
+ if(c.player==true)then
+		car_player_update(c)
 	else
-	 car:ia_update()
+	 car_ia_update(c)
 	end
 end
 
 ------------
 --  draw  --
 ------------
-function car:draw()
-	local x,y=self.x,self.y
+function car_draw(c)
+	local x,y=c.x,c.y
 
-	draw_rotation(x,y,self)
+	for j=0,8 do
+		tline(x,y+j,x+8,y+j,
+								0,15+j*.125,
+								.125,0)
+	end
+	--tline(x,y+1,x+4,y+1,0.1,0.1,1/8,1/8)
+	--draw_rotation(x,y,c)
 	pal()
 	-- fx
 	--foreach(self.part,particle_draw)
  --print(#self.part,50,50,7)
 	--car:speed_variation()
 	
- car:debug()	
+ car_debug(c)	
 end
 
 --[[
@@ -150,8 +170,8 @@ function car:speed_variation()
 end
 ]]
 
-function car:debug()
-	local x,y,s=self.x,self.y,self.speed
+function car_debug(c)
+	local x,y,s=c.x,c.y,c.speed
 	if(debug_car==1)then
 		-- origins
 		line(x-2,y,x+2,y,10)
@@ -159,8 +179,8 @@ function car:debug()
 		-- vector 
 		--line(x,y,x+cos(self.angle)*s*3,y-sin(self.angle)*s*3,7)
 		--circ(x+cos(self.angle)*s*3,y-sin(self.angle)*s*3,1,10)
-		line(x,y,x+cos(self.angle)*s*5,y-sin(self.angle)*s*5,7)
-		circ(x+cos(self.angle)*s*5,y-sin(self.angle)*s*5,1,10)
+		line(x,y,x+cos(c.angle)*s*5,y-sin(c.angle)*s*5,7)
+		circ(x+cos(c.angle)*s*5,y-sin(c.angle)*s*5,1,10)
 	 -- bounding box
 	 --rect(x-self.hbl,y-self.hbt,x+self.hbr,y+self.hbb,7)
 		--  
@@ -168,14 +188,13 @@ function car:debug()
 	 -- hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
 		for i=-3,2 do
 	 	for j=-2,3 do
-	 		pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(self.x+i,self.y+j))
+	 		pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(c.x+i,c.y+j))
 	 	end
 		end 	
 	end	
 end
 
-function car:ia_update()
-	local c=self
+function car_ia_update(c)
 	local dx,dy,arc
 	dx=circuit.chkpnts[c.cchkpnt+1].x-c.x
 	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
@@ -221,91 +240,91 @@ function car:ia_update()
 	--c.y+=cos(c.angle)*c.speed
 end
 
-function car:player_update()
+function car_player_update(c)
 	local crash=false
 	local nokeys=true
 
 	-- commands
-	self.accelerate=false
-	self.brake=false
+	c.accelerate=false
+	c.brake=false
 
-	if(self.crashing==false)then
+	if(c.crashing==false)then
 		if (btn(0))then -- turn left
 			nokeys=false
-		 self.angle-=.01
+		 c.angle-=.01
 		end 
 		if (btn(1))then -- turn right
 			nokeys=false
-		 self.angle+=.01
+		 c.angle+=.01
 		end
 		--self.angle=(flr(self.angle*100)/100)%1
 		-- speed
 		if (btn(4))then -- accel.
 			nokeys=false
-		 if(self.speed<4.4)then
-		 	self.accelerate=true
-		  self.speed+=.1
+		 if(c.speed<4.4)then
+		 	c.accelerate=true
+		  c.speed+=.1
 			end
 		end
 		if (btn(5))then -- brake
 			nokeys=false
-			if(self.speed>0) self.b0000r0a0000000ke=true
-		 if(self.speed>-.4) self.speed-=.2
+			if(c.speed>0) c.brake=true
+		 if(c.speed>-.4) c.speed-=.2
 		end
 		-- other
-		if (btn(2)) self.x,self.y=64,80
+		if (btn(2)) c.x,c.y=64,80
 	end
 	
 	if(nokeys==true)then
-		if(self.speed>.03) self.speed-=.04
-		if(self.speed<-.03) self.speed+=.04
-		if((self.speed>-.03)and(self.speed<.03)) self.speed=0
+		if(c.speed>.03) c.speed-=.04
+		if(c.speed<-.03) c.speed+=.04
+		if((c.speed>-.03)and(c.speed<.03)) self.speed=0
 	end
 	-- ground effects
 	---- collisions
 	------ circuit bounds
-	if((self.x<=0)or(self.x>=circuit.realwidth))then
-		self.angle=atan2(-cos(self.angle),sin(self.angle))
+	if((c.x<=0)or(c.x>=circuit.realwidth))then
+		c.angle=atan2(-cos(c.angle),sin(self.angle))
 		crash=true
-	elseif((self.y<=0)or(self.y>=circuit.realheigh))then
-		self.angle=atan2(cos(self.angle),-sin(self.angle))
+	elseif((c.y<=0)or(c.y>=circuit.realheigh))then
+		c.angle=atan2(cos(c.angle),-sin(self.angle))
 		crash=true
 	end
 	---- speed variation
 	--speed_variation() 
 	
  -- result
-	self.x+=cos(self.angle)*self.speed
-	self.y-=sin(self.angle)*self.speed
+	c.x+=cos(c.angle)*c.speed
+	c.y-=sin(c.angle)*c.speed
 	-- crash
 	if(crash==true)then
-		self.crashing=true
+		c.crashing=true
 		crash=false
 		make_crash()
 	end
-	if(self.crashing==true)then
-		if(self.speed<.1)then
-		 self.speed=0
-		 self.crashing=false
+	if(c.crashing==true)then
+		if(c.speed<.1)then
+		 c.speed=0
+		 c.crashing=false
 		else
-		 self.rotation+=.08
-			self.speed-=.2
+		 c.rotation+=.08
+			c.speed-=.2
 		end	
 	else
-		self.rotation=self.angle
+		c.rotation=self.angle
 	end
  -- fx
-	if((self.accelerate==true)and(t%40==0))then
-	 self.sparking=true
+	if((c.accelerate==true)and(t%40==0))then
+	 c.sparking=true
 	 make_sparks()
 	end
 	make_brakesmoke()
-	if(self.sparking==true)then
-		self.sparking=false
+	if(c.sparking==true)then
+		c.sparking=false
 	end
-	foreach(self.part,particle_update) 
- for p in all(self.part) do
- 	if(p.duration==0) del(self.part,p)
+	foreach(c.part,particle_update) 
+ for p in all(c.part) do
+ 	if(p.duration==0) del(c.part,p)
  end
 end
 -----------------
@@ -663,6 +682,7 @@ cam={
 }
 	
 function cam:update()
+	local car=cars[1]
 	--if(car.angle<.50) self.povclip=self.pov+clipping
 
 	self.x=car.x-self.initx+cos(car.angle)*self.pov
@@ -709,14 +729,14 @@ function ia_cars_init(x,y)
 end
 ]]
 __gfx__
-00000000feefffff0006000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000feeffeef0006000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700bbfbbffb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000bbebbeeb0006000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700bbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000bbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000bbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700bbfbbffb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700bbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000bbebbeeb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000feeffeef0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000feefffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 05500000056000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 06500650056005600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 880ee008880ee0080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -959,3 +979,4 @@ __map__
 80848484848484848481a7a796a6a6a6a697a7a7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 80848484848484848481a7a7a796a6a697a7a7a7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 a28383838383838383a3a7a7a7a79697a7a7a7a7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
