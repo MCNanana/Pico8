@@ -25,10 +25,10 @@ function _update()
 	for c in all(cars) do
 		car_update(c)
 	end
+	
 	-- cam
 	--local povclip=cam.pov
 	--if(car.angle<.50) povclip=cam.pov+clipping
-	
 	cam:update()
 end
 
@@ -72,16 +72,18 @@ function sprite_zoom(x,y,scale,pixoffsetx,pixoffsety,sizex,sizey)
 end]]
 
 function print_speed()
-	print("lap: 1/4",cam.x+2,cam.y+112,7)
+	local car=cars[1]
+	print("lap: "..car.lap.."/4",cam.x+2,cam.y+112,7)
 	print("spd: "..flr(car.speed*350/4.4),cam.x+50,cam.y+112,7)
 	print("pos: 8/10",cam.x+90,cam.y+112,7)
 end
 -->8
 -- car
-ia_dist_cp=10
+ia_dist_cp=8
+plyr_dist_cp=20
 acc=.1
 brk=.2
-nth=.04
+nth=.07
 
 	
 --[[function car:init(player)
@@ -97,7 +99,7 @@ function make_car(player,x,y,col)
 car={
 	model=0,
 	player=player,
-	cchkpnt=0,
+	cchkpnt=0,lap=0,
 	x=x,y=y, -- real coordinates
 	--xos=0,yos=0, -- coordinates on tile
 	angle=.75,speed=1,
@@ -118,9 +120,7 @@ car={
 	}
 	
  if(car.model==0)then
- 	-- hero
  	car.sosx=8
- 	--self.sosy=8
  end
  
  return car
@@ -198,18 +198,7 @@ function car_ia_update(c)
 	dx=circuit.chkpnts[c.cchkpnt+1].x-c.x
 	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
 	--distance
-	local dist
-	if(abs(dx)>100)or(abs(dy)>100)then
-		dist=100
-	else
-		dist=sqrt(dx*dx+dy*dy)
- end
- if(dist<ia_dist_cp)then
-		c.cchkpnt+=1 
- 	if(c.cchkpnt>=#circuit.chkpnts)then
- 	 c.cchkpnt=0
- 	end 
- end
+	car_chckpnt(c,dx,dy)
 	-- angle
 	arc=atan2(dx,-dy)
 	local diffangle=c.angle-arc
@@ -226,7 +215,7 @@ function car_ia_update(c)
  	and(c.speed<4.4)then
   c.speed+=acc
  elseif(action=="n")
- 	and(c.speed>3)then
+ 	and(c.speed>3.2)then
   c.speed-=nth
  elseif(action=="b")
  	and(c.speed>2)then
@@ -240,7 +229,11 @@ end
 function car_player_update(c)
 	local crash=false
 	local nokeys=true
-
+	local dx,dy
+	dx=circuit.chkpnts[c.cchkpnt+1].x-c.x
+	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
+	--distance
+	car_chckpnt(c,dx,dy)
 	-- commands
 	c.accelerate=false
 	c.brake=false
@@ -281,7 +274,7 @@ function car_player_update(c)
 	---- collisions
 	------ circuit bounds
 	if((c.x<=0)or(c.x>=circuit.realwidth))then
-		c.angle=atan2(-cos(c.angle),sin(self.angle))
+		c.angle=atan2(-cos(c.angle),sin(c.angle))
 		crash=true
 	elseif((c.y<=0)or(c.y>=circuit.realheigh))then
 		c.angle=atan2(cos(c.angle),-sin(c.angle))
@@ -324,6 +317,29 @@ function car_player_update(c)
  	if(p.duration==0) del(c.part,p)
  end
 end
+
+-- manage car checkpoints
+function car_chckpnt(c,dx,dy)
+	local dist,dist_limit_cp
+	
+	if c.player==true then dist_limit_cp=plyr_dist_cp
+	else dist_limit_cp=ia_dist_cp
+	end
+	
+	if(abs(dx)>100)or(abs(dy)>100)then
+		dist=100
+	else
+		dist=sqrt(dx*dx+dy*dy)
+ end
+ if(dist<dist_limit_cp)then
+		c.cchkpnt+=1 
+ 	if(c.cchkpnt==1) c.lap+=1
+ 	if(c.cchkpnt>=#circuit.chkpnts)then
+ 	 c.cchkpnt=0
+ 	end 
+ end
+end
+
 -----------------
 -- fx & events --
 -----------------
@@ -475,7 +491,7 @@ end
 	}]]
 -- index,x,y,speed
 circuit0={
- {i=1,x=100,y=250,p="a"},
+ {i=1,x=100,y=242,p="a"},
  {i=2,x=88,y=160,p="a"},
  {i=3,x=115,y=115,p="b"},
  {i=4,x=210,y=86,p="a"},
@@ -558,26 +574,25 @@ end
 
 function draw_tline(x,y,
 								sw_rot,mx,my,r,col)    
- local cs,ss = cos(sw_rot), -sin(sw_rot)
- local ssx,ssy = mx-0.3, my-0.3
+ local cs,ss= cos(sw_rot), -sin(sw_rot)
+ local ssx,ssy= mx-0.3, my-0.3
  --ssx=-.3
- local cx,cy = mx+r/2, my+r/2    
+ local cx,cy= mx+r/2, my+r/2    
  --cx=.5
- ssy -=cy
- ssx -=cx
+ ssy-=cy
+ ssx-=cx
  --ssx=-.8
- local sx=cs * ssx + cx
- local sy=-ss * ssx + cy
- local delta_px =  -ssx*8
- --delta_px=-6.4
- --if (flip) delta_px=-delta_px x-=1
+ local sx=cs*ssx+cx
+ local sy=-ss*ssx+cy
+ local delta_px=-ssx*8
+	-- color
  local ocol,ncol
  local xcol,ycol=16,1+col
    
  for py=y-delta_px,y+delta_px do
   tline(x-delta_px, py, 
   x+delta_px, py, 
-  sx + ss * ssy, sy + cs * ssy, 
+  sx+ss*ssy, sy+cs*ssy, 
   cs/8, -ss/8)
 		
 		for px=x-delta_px,x+delta_px do
@@ -791,8 +806,8 @@ function ia_cars_init(x,y)
 end
 ]]
 __gfx__
-000000000ee00ee00006000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000ffe00eef0006000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000ee00ee00005000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000ffe00eef0005000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700ff04440fe800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000ff44aa443b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000ff44aa441c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
