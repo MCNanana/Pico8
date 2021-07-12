@@ -3,7 +3,7 @@ version 32
 __lua__
 -- const
 debug=1
-debug_car=0
+debug_car=1
 --
 clipping=18 -- bordure du bas
 t=0 -- temps
@@ -82,9 +82,12 @@ end
 ia_dist_cp=8
 plyr_dist_cp=20
 acc=.1
-brk=.2
-nth=.07
-
+brk=-.2
+nth=-.07
+rear=-.4
+sv1=.11
+sv2=.13
+sv3=.15
 	
 --[[function car:init(player)
 	self.player=player
@@ -102,8 +105,8 @@ car={
 	cchkpnt=0,lap=0,
 	x=x,y=y, -- real coordinates
 	--xos=0,yos=0, -- coordinates on tile
-	angle=.75,speed=1,
-	accelerate=false,brake=false,
+	angle=.75,speed=0,
+	accelerate=false,brake=false,rear=false,
 	asphalt=1, -- is the car on the asphalt ?
 	hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
 	arc=0,dx=0,dy=0,
@@ -158,22 +161,35 @@ function car_draw(c)
  car_debug(c)	
 end
 
---[[
-function car:speed_variation()
-	local sum,nb=0,(self.hbr-self.hbl)+(self.hbb-self.hbt)+2
-	for i=self.hbl,self.hbr do
-	 for j=self.hbt,self.hbb do
-	 	if(circuit:where_am_i(self.x+i,self.y+j)==5) sum+=1
+
+function car_speed_variation(c)
+	local sum,nb=0,36--(c.hbr-c.hbl)+(c.hbb-c.hbt)+2
+	local col
+	--for i=c.hbl,c.hbr do
+	 --for j=c.hbt,c.hbb do
+	for i=-3,2 do
+		for j=-2,3 do
+			col=circuit:where_am_i(c.x+i,c.y+j)
+	 	if((col==5)or(col==7)or(col==8)) sum+=1
 	 end
 	end 	
- print(sum/nb,cam.x+50,cam.y+30,7)	
- return sum/nb
+ --print(sum/nb,cam.x+50,cam.y+30,7)	
+ local result=sum/nb
+ if(result<.25)then
+ 	return sv3
+ elseif(result<.5)then
+ 	return sv2
+ elseif(result<.8)then
+ 	return sv1
+ else
+ 	return 0
+ end 
 end
-]]
+
 
 function car_debug(c)
 	local x,y,s=c.x,c.y,c.speed
-	if(debug_car==1)then
+	if(debug_car==1)and(c.player==true)then
 		-- origins
 		line(x-2,y,x+2,y,10)
 		line(x,y-2,x,y+2,10)
@@ -216,10 +232,10 @@ function car_ia_update(c)
   c.speed+=acc
  elseif(action=="n")
  	and(c.speed>3.2)then
-  c.speed-=nth
+  c.speed+=nth
  elseif(action=="b")
  	and(c.speed>2)then
-  c.speed-=brk
+  c.speed+=brk
 	end
 	-- new coordinates
 	c.x+=cos(c.angle)*c.speed
@@ -234,9 +250,13 @@ function car_player_update(c)
 	dy=circuit.chkpnts[c.cchkpnt+1].y-c.y
 	--distance
 	car_chckpnt(c,dx,dy)
+	---- speed variation
+	local speed=0
+	local sv=car_speed_variation(c) 
 	-- commands
 	c.accelerate=false
 	c.brake=false
+	c.rear=false
 
 	if(c.crashing==false)then
 		if (btn(0))then -- turn left
@@ -247,28 +267,48 @@ function car_player_update(c)
 			nokeys=false
 		 c.angle+=.01
 		end
-		--self.angle=(flr(self.angle*100)/100)%1
 		-- speed
 		if (btn(4))then -- accel.
 			nokeys=false
 		 if(c.speed<4.4)then
 		 	c.accelerate=true
-		  c.speed+=.1
+		  speed=acc
 			end
 		end
 		if (btn(5))then -- brake
 			nokeys=false
 			if(c.speed>0) c.brake=true
-		 if(c.speed>-.4) c.speed-=.2
+		 if(c.speed>0)then speed=brk
+		 else c.rear=true
+		 end
 		end
 		-- other
 		if (btn(2)) c.x,c.y=64,80
 	end
 	
 	if(nokeys==true)then
-		if(c.speed>.03) c.speed-=.04
-		if(c.speed<-.03) c.speed+=.04
-		if((c.speed>-.03)and(c.speed<.03)) c.speed=0
+		--if(c.speed>-nth) speed=nth
+		--if(c.speed<-.03) c.speed+=.04
+		--if((c.speed>-.03)and(c.speed<.03)) c.speed=0
+	end
+
+
+	if(nokeys)then
+		if(c.speed>-nth)then
+			c.speed+=(min(nth,sv))
+		else
+			c.speed=0
+		end
+	elseif(c.rear)then 
+		c.speed=rear
+	elseif(c.accelerate)then
+		if(c.speed>sv)then
+			c.speed+=(acc-sv)
+		else
+			c.speed+=.4
+		end
+	elseif(c.brake)then 
+		c.speed+=(brk-sv/2)
 	end
 	-- ground effects
 	---- collisions
@@ -280,8 +320,6 @@ function car_player_update(c)
 		c.angle=atan2(cos(c.angle),-sin(c.angle))
 		crash=true
 	end
-	---- speed variation
-	--speed_variation() 
 	
  -- result
 	c.x+=cos(c.angle)*c.speed
