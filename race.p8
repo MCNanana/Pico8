@@ -41,7 +41,6 @@ function _draw()
 	for c in all(cars) do
 		car_draw(c)
 	end
-	--circuit:where_am_i(car.x,car.y)
 
 	cam:draw()
 	clip()
@@ -50,11 +49,12 @@ function _draw()
 	if(debug==1)then
 		local c=cars[1]
 		print("a:"..c.angle.." s:"..c.speed,cam.x+2,cam.y+1,7)
-	 print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
-	 print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
+	 	print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
+	 	print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
 		print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
 		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
-	 print(circuit.chkpnts[c.cchkpnt+1].x.."-"..circuit.chkpnts[c.cchkpnt+1].y.." - "..c.cchkpnt.." - "..c.arc,cam.x+2,cam.y+30,7)
+	 	print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)
+	 --print(circuit.chkpnts[c.cchkpnt+1].x.."-"..circuit.chkpnts[c.cchkpnt+1].y.." - "..c.cchkpnt.." - "..c.arc,cam.x+2,cam.y+30,7)
 	end
 end
 
@@ -79,7 +79,7 @@ function print_speed()
 end
 -->8
 -- car
-ia_dist_cp=8
+ia_dist_cp=10
 plyr_dist_cp=40
 max_speed=4.4
 acc=.1
@@ -105,6 +105,7 @@ car={
 	player=player,
 	cchkpnt=0,lap=0,
 	x=x,y=y, -- real coordinates
+	celx=0,cely=0,
 	--xos=0,yos=0, -- coordinates on tile
 	angle=.75,speed=0,
 	hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
@@ -145,19 +146,13 @@ end
 function car_draw(c)
 	draw_tline(c.x,c.y,c.angle,
 										0,16,1,c.col)
-	--[[for j=0,8 do
-		tline(x,y+j,x+8,y+j,
-								0,15+j*.125,
-								.125,0)
-	end]]
 	--draw_rotation(x,y,c)
 	pal()
 	-- fx
 	--foreach(self.part,particle_draw)
- --print(#self.part,50,50,7)
-	--car:speed_variation()
+ 	--print(#self.part,50,50,7)
 	
- car_debug(c)	
+	car_debug(c)	
 end
 
 
@@ -168,11 +163,11 @@ function car_speed_variation(c)
 	 --for j=c.hbt,c.hbb do
 	for i=-3,2 do
 		for j=-2,3 do
-			col=circuit:where_am_i(c.x+i,c.y+j)
+			col=circuit:where_am_i(c,i,j)
 	 	if((col==5)or(col==7)or(col==8)) sum+=1
 	 end
 	end 	
- --print(sum/nb,cam.x+50,cam.y+30,7)	
+
  local result=sum/nb
  if(result<.25)then
  	return sv3
@@ -201,9 +196,9 @@ function car_debug(c)
 		rectfill(cam.x+64,cam.y+64,cam.x+71,cam.y+71,12)
 	 -- hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
 		for i=-3,2 do
-	 	for j=-2,3 do
-	 		pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(c.x+i,c.y+j))
-	 	end
+	 		for j=-2,3 do
+	 			pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(c,i,j))
+	 		end
 		end 	
 	end	
 end
@@ -231,10 +226,10 @@ function car_ia_update(c)
   c.speed+=acc
  elseif(action=="n")
  	and(c.speed>3.2)then
-  c.speed+=nth
+  c.speed-=nth
  elseif(action=="b")
  	and(c.speed>2)then
-  c.speed+=brk
+  c.speed-=brk
 	end
 	-- new coordinates
 	c.x+=cos(c.angle)*c.speed
@@ -337,7 +332,7 @@ end
 function car_chckpnt(c,dx,dy)
 	local dist,dist_limit_cp
 	
-	if c.player==true then dist_limit_cp=plyr_dist_cp
+	if c.player then dist_limit_cp=plyr_dist_cp
 	else dist_limit_cp=ia_dist_cp
 	end
 	
@@ -400,9 +395,8 @@ function circuit:init(m)
  if(self.model==0)then
   self.x,self.y=0,32
   self.width,self.heigh=24,16
-  self.realwidth,self.realheigh=960,640
+  self.realwidth,self.realheigh=960,640 -- realwidth = width* tile_width (5) * 8 pixels each
   self.chkpnts=circuit0
-  --add(self.checkpoints,checkpoint_init(60,80,40,70,20,20))
  end
 end
 
@@ -417,42 +411,36 @@ function circuit:where_am_i_on_map(x,y)
 end
 
 -- on the real circuit
-function circuit:where_am_i(x,y)
+function circuit:where_am_i(c,i,j)
+	local x,y=c.x+i,c.y+j
  -- which segment on the map?
- local c=circuit:where_am_i_on_map(x,y)
+ local col=circuit:where_am_i_on_map(x,y)
  local xs,ys=x%(8*tile_width),y%(8*tile_heigh)
-	--local ssx,ssy=x/(8*tile_width),y/(8*tile_heigh)
-	--ssx+=self.x
-	--ssy+=self.y
-	--local c=sget(flr(ssx),flr(ssy))
+ local celx,cely
+ local celw,celh
  -- which sprite on this segment?
 	local found=false
-	local	i=1
+	local k=1
 
  -- xs: position on the tile
  -- which tile ?
 	repeat
-	 if(tiles[i].c==c)then
-	  celx,cely=tiles[i].x,tiles[i].y
-		 celw,celh=tiles[i].w,tiles[i].h
-		 found=true
-	 else
-	  i+=1
+	 	if(tiles[k].c==col)then
+	  		celx,cely=tiles[k].x,tiles[k].y
+			celw,celh=tiles[k].w,tiles[k].h
+			found=true
+	 	else
+	  		k+=1
 	 end
 	until found==true
- -- which subtile ?
- local stx=flr(xs/8)
- local sty=flr(ys/8)
-	local sprnb=mget(celx+stx,cely+sty)
-	--print(c..", "..sprnb,cam.x+40,cam.y+40,7)
-	--map(celx,cely,x*celw*8,y*celh*8,celw,celh)
-	--car.xos=flr(x%8)
-	--car.yos=flr(y%8)
- -- which color on this sprite?
-	local col=get_color(sprnb,flr(x%8),flr(y%8))
-	--print(flr(x%8).."-"..flr(y%8),cam.x+50,cam.y+30,7)	
-	--print(col,cam.x+50,cam.y+42,7)	
- return col
+ 	-- which subtile ?
+ 	local stx=flr(xs/8)
+ 	local sty=flr(ys/8)
+	c.celx=celx+stx
+	c.cely=cely+sty
+	local sprnb=mget(c.celx,c.cely)
+ 	-- which color on this sprite?
+ 	return get_color(sprnb,flr(x%8),flr(y%8))
 end
 
 function circuit:draw()
@@ -465,19 +453,6 @@ function circuit:draw()
  	for j=self.y,sizey do
 			local col=sget(i,j)
 			draw_tile(i-self.x,j-self.y,col)
-  	-- draw checkpoints
-	 	--[[if(debug==1)then
-	 		local checkpoint
-				--print(checkpoints[k],cam.x+30,cam.y+30,7)
-				--print("",cam.x+30,cam.y+40,7)
-	 		for k=1,#checkpoints do
-	 			if(checkpoints[k].c==col)then
-						local chckpnt=checkpoint_init(checkpoints[k])
-	 			 checkpoint_draw(i-self.x,j-self.y,chckpnt)
-	 			end
-	 		end
- 			--foreach(self.checkpoints,checkpoint_draw)
- 		end]]
 		end
  end
  --
@@ -492,18 +467,7 @@ end
 ----------------
 -- checkpoint --
 ----------------
---[[checkpoints={
-	{c=0,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- grass
-	{c=1,ax=19,ay=19,bx=0,by=16,bw=40,bh=8},-- verticaly
-	{c=2,ax=19,ay=19,bx=16,by=0,bw=8,bh=40},-- horizontaly
-	{c=3,ax=38,ay=38,bx=0,by=0,bw=8,bh=40},-- up left corner
-	{c=4,ax=2,ay=38,bx=16,by=0,bw=8,bh=40},-- up right croner
-	{c=5,ax=38,ay=2,bx=16,by=0,bw=8,bh=40},-- bottom left corner
-	{c=6,ax=2,ay=2,bx=16,by=0,bw=8,bh=40},-- bottom right corner
-	{c=7,ax=19,ay=19,bx=0,by=16,bw=40,bh=8},--start line
-	{c=8,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- up slope
-	{c=9,ax=0,ay=0,bx=0,by=0,bw=0,bh=0},-- down slope
-	}]]
+
 -- index,x,y,speed
 circuit0={
  {i=1,x=100,y=242,p="a"},
@@ -752,7 +716,6 @@ function draw_rotation(x,y,c)
 	c.tiresanim+=c.speed/10
 	if(c.tiresanim>6) c.tiresanim=0
 end
-
 
 -- get the sprite_nb's color at x,y
 -- -- 0..15
@@ -1064,6 +1027,9 @@ __label__
 82228222828282228888822282228288822288828882888888888888888888888888888888888888888882228222822282228288822282228882822288822288
 88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888
 
+__gff__
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 80848484818282828282b0b0b0b0b095a4a4a4a5b2b2b2b2b200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 80848484818484848484b0b0b0b0b08094848481b2b2b2b2b200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
