@@ -2,12 +2,14 @@ pico-8 cartridge // http://www.pico-8.com
 version 32
 __lua__
 -- const
-debug=1
-debug_car=1
---
+debug=true
+debug_car=true
+debug_circuit=true
+-- ihm
 clipping=20 -- bordure du bas
---t=0 -- temps
-
+-- race
+finish=false
+lap=1
 cars={}
 
 function _init()
@@ -16,11 +18,11 @@ function _init()
  add(cars,make_car(true,100,290,1))
  add(cars,make_car(false,110,295,2))
  add(cars,make_car(false,100,310,3))
+ add(cars,make_car(false,110,315,4))
+ add(cars,make_car(false,100,320,5))
 end
 
 function _update()
- --t+=1
-
 	-- cars
 	for c in all(cars) do
 		car_update(c)
@@ -29,7 +31,7 @@ function _update()
 	-- cam
 	--local povclip=cam.pov
 	--if(car.angle<.50) povclip=cam.pov+clipping
-	cam:update()
+	if(not finish) cam:update()
 end
 
 function _draw()
@@ -46,14 +48,10 @@ function _draw()
 	clip()
 	print_speed()
 
-	if(debug==1)then
-		local c=cars[1]
-		print("a:"..c.angle.." s:"..c.speed,cam.x+2,cam.y+1,7)
-	 	print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
-	 	print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
-		print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
+	if(debug)then
+		print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
+		print("cpu "..flr(stat(1)),cam.x+104,cam.y+1,7)
 		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
-	 	print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)
 	 --print(circuit.chkpnts[c.cchkpnt+1].x.."-"..circuit.chkpnts[c.cchkpnt+1].y.." - "..c.cchkpnt.." - "..c.arc,cam.x+2,cam.y+30,7)
 	end
 end
@@ -74,7 +72,7 @@ end]]
 function print_speed()
 	local car=cars[1]
 	print("pos: 8/10",cam.x+2,cam.y+109,7)
-	print("lap: "..car.lap.."/4",cam.x+2,cam.y+116,7)
+	print("lap: "..car.lap.."/"..lap,cam.x+2,cam.y+116,7)
 	print("spd: "..flr(car.speed*350/4.4),cam.x+50,cam.y+112,7)
 end
 -->8
@@ -138,6 +136,15 @@ function car_update(c)
 	else
 	 car_ia_update(c)
 	end
+	
+	if(c.lap==lap)and(c.cchkpnt==0)then
+		if(c.x>circuit.startline.x0)and
+			(c.x<circuit.startline.x1)and
+			(c.y<=circuit.startline.y0)and
+			(c.y>circuit.startline.y0-max_speed)
+			then finish=true
+		end
+	end
 end
 
 ------------
@@ -185,8 +192,8 @@ end
 
 
 function car_debug(c)
-	local x,y,s=c.x,c.y,c.speed
-	if(debug_car==1)and(c.player==true)then
+	if(debug_car)and(c.player)then
+		local x,y,s=c.x,c.y,c.speed
 		-- origins
 		line(x-2,y,x+2,y,10)
 		line(x,y-2,x,y+2,10)
@@ -202,7 +209,13 @@ function car_debug(c)
 	 		for j=-2,3 do
 	 			pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(c,i,j))
 	 		end
-		end 	
+		end 
+		
+		print("a:"..c.angle.." s:"..c.speed,cam.x+2,cam.y+1,7)
+	 print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
+		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
+	 print(c.cchkpnt.."-"..tostr(finish),cam.x+2,cam.y+30,7)	
+	 --print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)	
 	end	
 end
 
@@ -390,6 +403,7 @@ circuit={
 	width=0,heigh=0,-- on the spritesheet - px
 	realwifdth=0,realheigh=0, -- on screen - px
 	chkpnts,
+	startline,
 	}
 	
 function circuit:init(m)
@@ -400,6 +414,7 @@ function circuit:init(m)
   self.width,self.heigh=24,16
   self.realwidth,self.realheigh=960,640 -- realwidth = width* tile_width (5) * 8 pixels each
   self.chkpnts=circuit0
+  self.startline=line_circuit0
  end
 end
 
@@ -459,7 +474,10 @@ function circuit:draw()
 		end
  end
  --
- if(debug==1) foreach(self.chkpnts,drawchk)
+ if(debug_circuit)then 
+ 	foreach(self.chkpnts,drawchk)
+ 	line(self.startline.x0,self.startline.y0,self.startline.x1,self.startline.y1,8)
+	end
 end
 
 function drawchk(t)
@@ -472,25 +490,29 @@ end
 ----------------
 
 -- index,x,y,speed
+line_circuit0={
+	x0=70,y0=245,
+	x1=130,y1=245
+}
+
 circuit0={
- {i=1,x=100,y=242,p="a"},
- {i=2,x=88,y=160,p="a"},
- {i=3,x=115,y=115,p="b"},
- {i=4,x=210,y=86,p="a"},
- {i=5,x=300,y=120,p="n"},
- {i=6,x=430,y=120,p="a"},
- {i=7,x=800,y=85,p="a"},
- {i=8,x=848,y=115,p="b"}, 
- {i=9,x=870,y=200,p="a"}, 
- {i=10,x=845,y=286,p="a"}, 
- {i=11,x=710,y=316,p="b"},
- {i=12,x=710,y=368,p="n"},
- {i=13,x=848,y=396,p="b"},
- {i=14,x=874,y=478,p="a"},
- {i=15,x=842,y=526,p="n"},
- {i=16,x=374,y=554,p="a"},
- {i=17,x=254,y=473,p="a"},
- {i=18,x=116,y=453,p="n"},
+ {i=1,x=88,y=160,p="a"},
+ {i=2,x=115,y=115,p="b"},
+ {i=3,x=210,y=86,p="a"},
+ {i=4,x=300,y=120,p="n"},
+ {i=5,x=430,y=120,p="a"},
+ {i=6,x=800,y=85,p="a"},
+ {i=7,x=848,y=115,p="b"}, 
+ {i=8,x=870,y=200,p="a"}, 
+ {i=9,x=845,y=286,p="a"}, 
+ {i=10,x=710,y=316,p="b"},
+ {i=11,x=710,y=368,p="n"},
+ {i=12,x=848,y=396,p="b"},
+ {i=13,x=874,y=478,p="a"},
+ {i=14,x=842,y=526,p="n"},
+ {i=15,x=374,y=554,p="a"},
+ {i=16,x=254,y=473,p="a"},
+ {i=17,x=116,y=453,p="n"},
 
 }
 
@@ -835,8 +857,8 @@ dddddddddddddddddddddddd00000000000000000000000000000000000000000000000000000000
 00522280000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000098000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000009222222222222260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
