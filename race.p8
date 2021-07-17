@@ -8,8 +8,9 @@ debug_circuit=true
 -- ihm
 clipping=20 -- bordure du bas
 -- race
-finish=false
-lap=1
+finish=0
+plyr_position=1 -- player position
+car_stamina=100 -- dégats
 cars={}
 
 function _init()
@@ -31,7 +32,7 @@ function _update()
 	-- cam
 	--local povclip=cam.pov
 	--if(car.angle<.50) povclip=cam.pov+clipping
-	if(not finish) cam:update()
+	if(cars[1].finish==0) cam:update()
 end
 
 function _draw()
@@ -39,7 +40,6 @@ function _draw()
 	clip(0,0,128,128-clipping)
 	circuit:draw()
 	
-	--print(#cars,cam.x+62,cam.y+61,7)
 	for c in all(cars) do
 		car_draw(c)
 	end
@@ -71,14 +71,15 @@ end]]
 
 function print_speed()
 	local car=cars[1]
-	print("pos: 8/10",cam.x+2,cam.y+109,7)
-	print("lap: "..car.lap.."/"..lap,cam.x+2,cam.y+116,7)
+	print("pos: "..plyr_position.."/"..#cars,cam.x+2,cam.y+109,7)
+	print("lap: "..car.lap.."/"..circuit.lap,cam.x+2,cam.y+116,7)
 	print("spd: "..flr(car.speed*350/4.4),cam.x+50,cam.y+112,7)
 end
 -->8
 -- car
 ia_dist_cp=10
 plyr_dist_cp=40
+max_dist_cp=126
 max_speed=4.4
 acc=.1
 brk=.2
@@ -101,7 +102,9 @@ function make_car(player,x,y,col)
 car={
 	model=0,
 	player=player,
-	cchkpnt=0,lap=0,
+	cchkpnt=0,
+	DistToChkpnt=0,
+	lap=0,finish=0,
 	x=x,y=y, -- real coordinates
 	celx=0,cely=0,
 	--xos=0,yos=0, -- coordinates on tile
@@ -134,15 +137,18 @@ function car_update(c)
  if(c.player==true)then
 		car_player_update(c)
 	else
-	 car_ia_update(c)
+		car_ia_update(c)
 	end
 	
-	if(c.lap==lap)and(c.cchkpnt==0)then
+	if(c.lap==circuit.lap)and(c.cchkpnt==0)then
 		if(c.x>circuit.startline.x0)and
 			(c.x<circuit.startline.x1)and
 			(c.y<=circuit.startline.y0)and
 			(c.y>circuit.startline.y0-max_speed)
-			then finish=true
+			then
+				finish+=1
+				c.finish=finish
+				if(c.player) plyr_position=finish
 		end
 	end
 end
@@ -212,9 +218,9 @@ function car_debug(c)
 		end 
 		
 		print("a:"..c.angle.." s:"..c.speed,cam.x+2,cam.y+1,7)
-	 print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
+		print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
 		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
-	 print(c.cchkpnt.."-"..tostr(finish),cam.x+2,cam.y+30,7)	
+		print(c.cchkpnt.."-"..finish,cam.x+2,cam.y+30,7)	
 	 --print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)	
 	end	
 end
@@ -274,7 +280,6 @@ function car_player_update(c)
 		if(btn(4)and c.speed<=max_speed)then
 			-- accell
 			if(sv==0) c.speed=min(max_speed,c.speed+acc)
-			--c.speed=min(max_speed-(14*sv),c.speed+(acc-sv))
 			c.speed-=sv
 			if(c.speed<rear) c.speed=rear
 		elseif btn(5)then
@@ -342,28 +347,38 @@ function car_player_update(c)
  for p in all(c.part) do
  	if(p.duration==0) del(c.part,p)
  end
+
+ 	-- Position
+	if(c.finish==0)then
+		plyr_position=1
+		for i=2,#cars do
+			if(cars[i].lap>c.lap)then plyr_position+=1
+			elseif(cars[i].lap==c.lap)and(cars[i].cchkpnt>c.cchkpnt)then plyr_position+=1
+			elseif(cars[i].lap==c.lap)and(cars[i].cchkpnt==c.cchkpnt)and(cars[i].DistToChkpnt<=c.DistToChkpnt)then plyr_position+=1
+			end
+		end
+	end
 end
 
 -- manage car checkpoints
 function car_chckpnt(c,dx,dy)
-	local dist,dist_limit_cp
+	local dist_limit_cp
 	
 	if c.player then dist_limit_cp=plyr_dist_cp
 	else dist_limit_cp=ia_dist_cp
 	end
 	
-	if(abs(dx)>100)or(abs(dy)>100)then
-		dist=100
+	if(abs(dx)>max_dist_cp)or(abs(dy)>max_dist_cp)then
+		c.DistToChkpnt=max_dist_cp
 	else
-		dist=sqrt(dx*dx+dy*dy)
- end
- if(dist<dist_limit_cp)then
+		c.DistToChkpnt=sqrt(dx*dx+dy*dy)
+	end
+	
+	if(c.DistToChkpnt<dist_limit_cp)then
 		c.cchkpnt+=1 
- 	if(c.cchkpnt==1) c.lap+=1
- 	if(c.cchkpnt>=#circuit.chkpnts)then
- 	 c.cchkpnt=0
- 	end 
- end
+ 		if(c.cchkpnt==1) c.lap+=1
+ 		if(c.cchkpnt>=#circuit.chkpnts) c.cchkpnt=0
+	end
 end
 
 -----------------
@@ -404,7 +419,8 @@ circuit={
 	realwifdth=0,realheigh=0, -- on screen - px
 	chkpnts,
 	startline,
-	}
+	lap=1 -- nb de tour de la course
+}
 	
 function circuit:init(m)
 	self.model=m
@@ -431,17 +447,17 @@ end
 -- on the real circuit
 function circuit:where_am_i(c,i,j)
 	local x,y=c.x+i,c.y+j
- -- which segment on the map?
- local col=circuit:where_am_i_on_map(x,y)
- local xs,ys=x%(8*tile_width),y%(8*tile_heigh)
- local celx,cely
- local celw,celh
- -- which sprite on this segment?
+	-- which segment on the map?
+	local col=circuit:where_am_i_on_map(x,y)
+	local xs,ys=x%(8*tile_width),y%(8*tile_heigh)
+	local celx,cely
+	local celw,celh
+	-- which sprite on this segment?
 	local found=false
 	local k=1
 
- -- xs: position on the tile
- -- which tile ?
+	-- xs: position on the tile
+	-- which tile ?
 	repeat
 	 	if(tiles[k].c==col)then
 	  		celx,cely=tiles[k].x,tiles[k].y
@@ -469,20 +485,20 @@ function circuit:draw()
  -- draw tiles
  for i=self.x,sizex do
  	for j=self.y,sizey do
-			local col=sget(i,j)
-			draw_tile(i-self.x,j-self.y,col)
-		end
+		local col=sget(i,j)
+		draw_tile(i-self.x,j-self.y,col)
+	end
  end
  --
- if(debug_circuit)then 
- 	foreach(self.chkpnts,drawchk)
- 	line(self.startline.x0,self.startline.y0,self.startline.x1,self.startline.y1,8)
+	if(debug_circuit)then 
+ 		foreach(self.chkpnts,drawchk)
+ 		line(self.startline.x0,self.startline.y0,self.startline.x1,self.startline.y1,8)
 	end
 end
 
 function drawchk(t)
- --print(t.x..", "..t.y..", ",cam.x+2,cam.y+40,8)
- circ(t.x,t.y,3,8)
+	--print(t.x..", "..t.y..", ",cam.x+2,cam.y+40,8)
+	circ(t.x,t.y,3,8)
 end
 
 ----------------
@@ -516,7 +532,7 @@ circuit0={
 
 }
 
-function checkpoint_init(array)
+--[[function checkpoint_init(array)
 	checkpoint={
 	 bckgrnd=(array.c==0),
 	 lap=(array.c==7),
@@ -534,7 +550,7 @@ function checkpoint_draw(x,y,c)
 		circfill(c.apex.x+osx,c.apex.y+osy,2,8)
 		--rect(c.box.x+osx,c.box.y+osy,c.box.w,c.box.h,8)
 	end	
-end
+end]]
 
 -------------
 --  tiles  --
@@ -593,15 +609,18 @@ function draw_tline(x,y,
  local delta_px=-ssx*8
 	-- color
  local ocol,ncol
- local xcol,ycol=16,9+col
-   
+ local xcol,ycol=16,7+col
+ 
+ pal(4,sget(xcol,ycol))
+ pal(15,sget(xcol+1,ycol))
+  
  for py=y-delta_px,y+delta_px do
   tline(x-delta_px, py, 
   x+delta_px, py, 
   sx+ss*ssy, sy+cs*ssy, 
   cs/8, -ss/8)
 		
-		for px=x-delta_px,x+delta_px do
+		--[[for px=x-delta_px,x+delta_px do
 			ocol=pget(px,py)
 			if ocol==4 then
 				ncol=sget(xcol,ycol)
@@ -624,11 +643,12 @@ function draw_tline(x,y,
 				ncol=ocol	
 			end
 			pset(px,py,ncol)
-		end
+		end]]
 		--print(px,cam.x+60,cam.y+60,7)
  
   ssy+=1/8
 	end
+	pal()
 end
 
 ---------------
@@ -819,13 +839,13 @@ __gfx__
 00700700ffe444efffe444efffe444efffe444ef0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000ff0ee00fff0ee00fff6ee06fff0ee60f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000e00ee00ee00ee00ee06ee06ee60ee60e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-05500000056000000005000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06500650056005600005000500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-880ee008880ee008e800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-88eeeee888eeeee83b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-88eeeee888eeeee81c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-880ee008880ee0089a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06500650056005602d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0550000005600000e800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+06500650056005603b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+880ee008880ee0081c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88eeeee888eeeee89a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+88eeeee888eeeee82d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+880ee008880ee0080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+06500650056005600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 05500000056000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
