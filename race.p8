@@ -12,13 +12,13 @@ finish=0
 cars={}
 
 function _init()
- --camera()
 	circuit:init(0)
- add(cars,make_car(true,100,290,1))
- add(cars,make_car(false,110,295,2))
- add(cars,make_car(false,100,310,3))
- add(cars,make_car(false,110,315,4))
- add(cars,make_car(false,100,320,5))
+
+	add(cars,make_car(true,100,290,1,10,"moi"))
+	add(cars,make_car(false,110,295,2,10,"Lewis"))
+	add(cars,make_car(false,100,310,3,10,"Georges"))
+	add(cars,make_car(false,110,315,4,10,"Daniel"))
+	add(cars,make_car(false,100,320,5,10,"Lance"))
 end
 
 function _update()
@@ -70,10 +70,11 @@ end]]
 function print_speed()
 	local car=cars[1]
 	print("pos: "..player.position.."/"..#cars,cam.x+2,cam.y+109,7)
-	print("lap: "..car.lap.."/"..circuit.lap,cam.x+2,cam.y+116,7)
+	print("lap: "..car.lap.."/"..circuit.lap,cam.x+2,cam.y+118,7)
 	print("spd: "..flr(car.speed*350/4.4),cam.x+50,cam.y+109,7)
-	print("dam: "..player.car_stamina,cam.x+50,cam.y+116,7)
-	player:draw(cam.x+90,cam.y+114)
+	print("dam: ",cam.x+50,cam.y+118,7)
+	player:draw(cam.x+70,cam.y+117)
+	print(player.car_stamina,cam.x+74,cam.y+118,0)
 end
 -->8
 -- car
@@ -98,36 +99,32 @@ sv3=.1
  end
 end]]
 
-function make_car(player,x,y,col)
-car={
-	model=0,
-	player=player,
-	cchkpnt=0,
-	DistToChkpnt=0,
-	lap=0,finish=0,
-	x=x,y=y, -- real coordinates
-	celx=0,cely=0,
-	--xos=0,yos=0, -- coordinates on tile
-	angle=.75,speed=0,
-	hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
-	arc=0,dx=0,dy=0,
-	-- animations
-	crashing=false,
-	rotation=.75, -- crash animation
-	part={},
-	sparking=false,
-	tiresanim=0,
-	-- spritesheet offset
-	sosx=0,sosy=0, 
-	sosw=8,sosh=8,
-	col=col,-- couleur voiture
+function make_car(isPlayer,x,y,col,hcol,name)
+	car={
+		player=isPlayer,
+		helmetColor=hcol,
+		name=name,
+		cchkpnt=0,
+		DistToChkpnt=0,
+		lap=0,finish=0,
+		x=x,y=y, -- real coordinates
+		celx=0,cely=0,
+		--xos=0,yos=0, -- coordinates on tile
+		angle=.75,speed=0,
+		hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
+		arc=0,dx=0,dy=0,
+		-- animations
+		crashing=false,
+		rotation=.75, -- crash animation
+		part={},
+		sparking=false,
+		tiresanim=0,
+		-- spritesheet offset
+		sosx=8,sosy=0, 
+		sosw=8,sosh=8,
+		col=col,-- couleur voiture
 	}
-	
- if(car.model==0)then
- 	car.sosx=8
- end
- 
- return car
+	return car
 end
 
 ------------
@@ -318,7 +315,7 @@ function car_player_update(c)
 	c.x+=cos(c.angle)*c.speed
 	c.y-=sin(c.angle)*c.speed
 	-- crash
-	if(crash==true)then
+	--[[if(crash==true)then
 		c.crashing=true
 		crash=false
 		make_crash()
@@ -347,6 +344,7 @@ function car_player_update(c)
  for p in all(c.part) do
  	if(p.duration==0) del(c.part,p)
  end
+ ]]
 
  	-- Damage
 	if(sv==sv1)then player.car_stamina-=LightDamage
@@ -825,7 +823,8 @@ end
 -- player
 player={
 	position=1, -- player position
-	car_stamina=100 -- damage
+	car_stamina=100, -- damage
+	rival=5 -- index of the rival
 }
 
 LightDamage=.1
@@ -834,13 +833,13 @@ HardDamage=.4
 
 function player:draw(x,y)
 	local xf=0
-	rectfill(x-1,y-1,x+21,y+11,5)
+	rectfill(x-1,y-1,x+21,y+7,5)
 	if(self.car_stamina>75)then xf=20
 	elseif(self.car_stamina>50)then xf=15
 	elseif(self.car_stamina>25)then xf=10
 	elseif(self.car_stamina>0)then xf=5
 	end
-	rectfill(x,y,x+xf,y+10,7)
+	rectfill(x,y,x+xf,y+6,7)
 end
 
 __gfx__
