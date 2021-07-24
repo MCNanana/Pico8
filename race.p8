@@ -7,26 +7,32 @@ debug_car=true
 debug_circuit=true
 -- ihm
 clipping=20 -- bordure du bas
--- race
-finish=0
+
 cars={}
 
 function _init()
 	circuit:init(0)
 
-	add(cars,make_car(true,100,290,1,10,"moi"))
-	add(cars,make_car(false,110,295,2,10,"Lewis"))
-	add(cars,make_car(false,100,310,3,10,"Georges"))
-	add(cars,make_car(false,110,315,4,10,"Daniel"))
-	add(cars,make_car(false,100,320,5,10,"Lance"))
+	add(cars,make_car(true,92,254,1,10,"moi",normal))
+	add(cars,make_car(false,110,262,2,10,"Lewis",strong))
+	add(cars,make_car(false,92,270,3,10,"Georges",strong))
+	add(cars,make_car(false,110,278,4,10,"Daniel",normal))
+	add(cars,make_car(false,92,286,5,10,"Lance",normal))
+	add(cars,make_car(false,100,294,6,10,"Lance",normal))
+	add(cars,make_car(false,92,302,7,10,"Lance",weak))
+	add(cars,make_car(false,100,310,8,10,"Lance",weak))
 end
 
 function _update()
-	-- cars
-	for c in all(cars) do
-		car_update(c)
-	end
+	if(race.start)then
+		-- cars
+		for c in all(cars) do
+			car_update(c)
+		end
 	
+		car_collision()
+	end
+
 	-- cam
 	--local povclip=cam.pov
 	--if(car.angle<.50) povclip=cam.pov+clipping
@@ -45,6 +51,8 @@ function _draw()
 	cam:draw()
 	clip()
 	print_speed()
+
+	if(not race.start) race:countdown()
 
 	if(debug)then
 		print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
@@ -71,25 +79,34 @@ function print_speed()
 	local car=cars[1]
 	print("pos: "..player.position.."/"..#cars,cam.x+2,cam.y+109,7)
 	print("lap: "..car.lap.."/"..circuit.lap,cam.x+2,cam.y+118,7)
-	print("spd: "..flr(car.speed*350/4.4),cam.x+50,cam.y+109,7)
-	print("dam: ",cam.x+50,cam.y+118,7)
-	player:draw(cam.x+70,cam.y+117)
-	print(player.car_stamina,cam.x+74,cam.y+118,0)
+	print("spd: "..flr(car.speed*350/4.4),cam.x+42,cam.y+109,7)
+	print("dam: ",cam.x+42,cam.y+118,7)
+	player:draw(cam.x+60,cam.y+117)
+	print(player.car_stamina,cam.x+64,cam.y+118,0)
+	if(race.start) print("time: "..ceil(time()-race.chrono),cam.x+82,cam.y+109,7)
 end
 -->8
 -- car
-ia_dist_cp=10
+-- distance
+ia_dist_cp=14
 plyr_dist_cp=40
 max_dist_cp=126
+-- speed
 max_speed=4.4
 acc=.1
 brk=.2
 nth=.06
 rear=.4
+-- speed variation
 sv1=.05
 sv2=.08
 sv3=.1
-	
+-- ia
+strong=1
+normal=.9
+weak=.8
+
+
 --[[function car:init(player)
 	self.player=player
  if(self.model==0)then
@@ -99,7 +116,7 @@ sv3=.1
  end
 end]]
 
-function make_car(isPlayer,x,y,col,hcol,name)
+function make_car(isPlayer,x,y,col,hcol,name,level)
 	car={
 		player=isPlayer,
 		helmetColor=hcol,
@@ -109,9 +126,11 @@ function make_car(isPlayer,x,y,col,hcol,name)
 		lap=0,finish=0,
 		x=x,y=y, -- real coordinates
 		celx=0,cely=0,
+		iaLevel=level,
 		--xos=0,yos=0, -- coordinates on tile
 		angle=.75,speed=0,
 		hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
+		collision=false,
 		arc=0,dx=0,dy=0,
 		-- animations
 		crashing=false,
@@ -143,9 +162,9 @@ function car_update(c)
 			(c.y<=circuit.startline.y0)and
 			(c.y>circuit.startline.y0-max_speed)
 			then
-				finish+=1
-				c.finish=finish
-				if(c.player) player.position=finish
+				race.finish+=1
+				c.finish=race.finish
+				if(c.player) player.position=race.finish
 		end
 	end
 end
@@ -157,8 +176,7 @@ function car_draw(c)
 	palt(0, false)
 	palt(14,true)
 	mset(0,16,1+time()*c.speed*4%4)
-	draw_tline(c.x,c.y,c.angle,
-										0,16,1,c.col)
+	draw_tline(c.x,c.y,c.angle,0,16,1,c.col)
 	--draw_rotation(x,y,c)
 	palt()
 	-- fx
@@ -166,60 +184,6 @@ function car_draw(c)
  	--print(#self.part,50,50,7)
 	
 	car_debug(c)	
-end
-
-
-function car_speed_variation(c)
-	local sum,nb=0,36--(c.hbr-c.hbl)+(c.hbb-c.hbt)+2
-	local col
-	--for i=c.hbl,c.hbr do
-	 --for j=c.hbt,c.hbb do
-	for i=-3,2 do
-		for j=-2,3 do
-			col=circuit:where_am_i(c,i,j)
-	 	if((col==5)or(col==7)or(col==8)) sum+=1
-	 end
-	end 	
-
- local result=sum/nb
- if(result<.25)then
- 	return sv3
- elseif(result<.5)then
- 	return sv2
- elseif(result<.8)then
- 	return sv1
- else
- 	return 0
- end 
-end
-
-
-function car_debug(c)
-	if(debug_car)and(c.player)then
-		local x,y,s=c.x,c.y,c.speed
-		-- origins
-		line(x-2,y,x+2,y,10)
-		line(x,y-2,x,y+2,10)
-		-- vector 
-		line(x,y,x+cos(c.angle)*s*5,y-sin(c.angle)*s*5,7)
-		circ(x+cos(c.angle)*s*5,y-sin(c.angle)*s*5,1,10)
-	 -- bounding box
-	 --rect(x-self.hbl,y-self.hbt,x+self.hbr,y+self.hbb,7)
-		--  
-		rectfill(cam.x+64,cam.y+64,cam.x+71,cam.y+71,12)
-	 -- hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
-		for i=-3,2 do
-	 		for j=-2,3 do
-	 			pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(c,i,j))
-	 		end
-		end 
-		
-		print("a:"..c.angle.." s:"..c.speed,cam.x+2,cam.y+1,7)
-		print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
-		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
-		print(c.cchkpnt.."-"..finish,cam.x+2,cam.y+30,7)	
-	 --print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)	
-	end	
 end
 
 function car_ia_update(c)
@@ -238,18 +202,23 @@ function car_ia_update(c)
 	end
 	c.angle=abs(c.angle%1)
 	c.rotation=c.angle
- -- speed
- local action=circuit.chkpnts[c.cchkpnt+1].p
- if(action=="a")
- 	and(c.speed<max_speed)then
-  c.speed+=acc
- elseif(action=="n")
- 	and(c.speed>3.2)then
-  c.speed-=nth
- elseif(action=="b")
- 	and(c.speed>2)then
-  c.speed-=brk
-	end
+	-- speed
+	local action=circuit.chkpnts[c.cchkpnt+1].p
+	--if(not c.collision)then
+		if(action=="a")and(c.speed<max_speed)then
+			c.speed+=(acc*c.iaLevel)
+		elseif(action=="n")and(c.speed>3.2)then
+			c.speed-=nth
+		elseif(action=="b")and(c.speed>2)then
+			c.speed-=brk
+		end
+	--[[else
+		if(rnd(2)>1)then
+			if(c.speed>brk) c.speed-=brk
+		end]]
+		c.collision=false
+	--end
+	
 	-- new coordinates
 	c.x+=cos(c.angle)*c.speed
 	c.y-=sin(c.angle)*c.speed
@@ -269,17 +238,18 @@ function car_player_update(c)
 	if(c.crashing==false)then
 		if (btn(0))then -- turn left
 		 c.angle-=.01
-		end 
-		if (btn(1))then -- turn right
+		elseif (btn(1))then -- turn right
 		 c.angle+=.01
 		end
 		-- speed
 		if(btn(4)and c.speed<=max_speed)then
+			player.nokeys=false
 			-- accell
 			if(sv==0) c.speed=min(max_speed,c.speed+acc)
 			c.speed-=sv
 			if(c.speed<rear) c.speed=rear
 		elseif btn(5)then
+			player.nokeys=false
 			-- brake
 			if(c.speed>brk)then
 				c.speed-=(brk+sv)
@@ -289,7 +259,8 @@ function car_player_update(c)
 				c.speed=-rear
 			end
 		else
-			-- nokeys	
+			-- nokeys
+			player.nokeys=true	
 			if(c.speed>nth)then
 					c.speed=max(0,c.speed-(nth+sv))
 			else
@@ -302,6 +273,11 @@ function car_player_update(c)
 	
 	-- ground effects
 	---- collisions
+	if(c.collision)then 
+		c.speed=c.speed/2
+		c.collision=false
+		player.car_stamina-=VHDamage
+	end
 	------ circuit bounds
 	if((c.x<=0)or(c.x>=circuit.realwidth))then
 		c.angle=atan2(-cos(c.angle),sin(c.angle))
@@ -311,9 +287,10 @@ function car_player_update(c)
 		crash=true
 	end
 	
- -- result
+ 	-- result
 	c.x+=cos(c.angle)*c.speed
 	c.y-=sin(c.angle)*c.speed
+
 	-- crash
 	--[[if(crash==true)then
 		c.crashing=true
@@ -330,21 +307,22 @@ function car_player_update(c)
 		end	
 	else
 		c.rotation=c.angle
+	end]]
+	-- FX
+	if(btn(4) and(time()%2==0))then
+		c.sparking=true
+		make_sparks()
 	end
- -- fx
-	if((c.accelerate==true)and(t%40==0))then
-	 c.sparking=true
-	 make_sparks()
-	end
-	make_brakesmoke()
-	if(c.sparking==true)then
-		c.sparking=false
-	end
+	--make_brakesmoke()
+	--if(c.sparking==true)then
+	--	c.sparking=false
+	--end
 	foreach(c.part,particle_update) 
- for p in all(c.part) do
- 	if(p.duration==0) del(c.part,p)
- end
- ]]
+ 	
+	for p in all(c.part) do
+ 		if(p.duration==0) del(c.part,p)
+ 	end
+ 
 
  	-- Damage
 	if(sv==sv1)then player.car_stamina-=LightDamage
@@ -382,6 +360,83 @@ function car_chckpnt(c,dx,dy)
  		if(c.cchkpnt==1) c.lap+=1
  		if(c.cchkpnt>=#circuit.chkpnts) c.cchkpnt=0
 	end
+end
+
+-- Manager collisions between cars
+function car_collision()
+	local c1, c2, c3, c4
+
+	for i=1,#cars-1 do
+		for j=i+1,#cars do
+			c1=cars[i].y+cars[i].hbt<=cars[j].y+cars[j].hbb
+			c2=cars[i].y+cars[i].hbb>=cars[j].y+cars[j].hbt
+			c3=cars[i].x+cars[i].hbl<=cars[j].x+cars[j].hbr
+			c4=cars[i].x+cars[i].hbr>=cars[j].x+cars[j].hbl
+			if c1 and c2 and c3 and c4 
+				and (not cars[i].collision)
+				and (not cars[j].collision) then
+				cars[i].collision=true
+				cars[j].collision=true
+			end
+		end
+	end
+
+	--[[for c in all(cars) do
+		if(c.collision) c.angle=rnd(1) --and(c.speed>1)then c.speed=c.speed/2
+		c.collision=false
+	end]]
+end
+
+function car_speed_variation(c)
+	local sum,nb=0,36--(c.hbr-c.hbl)+(c.hbb-c.hbt)+2
+	local col
+	--for i=c.hbl,c.hbr do
+	 --for j=c.hbt,c.hbb do
+	for i=-3,2 do
+		for j=-2,3 do
+			col=circuit:where_am_i(c,i,j)
+	 		if((col==5)or(col==7)or(col==8)) sum+=1
+	 	end
+	end 	
+
+	local result=sum/nb
+	if(result<.25)then
+ 		return sv3
+	elseif(result<.5)then
+ 		return sv2
+	elseif(result<.8)then
+ 		return sv1
+	else
+ 		return 0
+ 	end 
+end
+
+function car_debug(c)
+	if(debug_car)and(c.player)then
+		local x,y,s=c.x,c.y,c.speed
+		-- origins
+		line(x-2,y,x+2,y,10)
+		line(x,y-2,x,y+2,10)
+		-- vector 
+		line(x,y,x+cos(c.angle)*s*5,y-sin(c.angle)*s*5,7)
+		circ(x+cos(c.angle)*s*5,y-sin(c.angle)*s*5,1,10)
+	 -- bounding box
+	 --rect(x-self.hbl,y-self.hbt,x+self.hbr,y+self.hbb,7)
+		--  
+		rectfill(cam.x+64,cam.y+64,cam.x+71,cam.y+71,12)
+	 -- hbl=-3,hbt=-2,hbr=2,hbb=3, -- hitbox
+		for i=-3,2 do
+	 		for j=-2,3 do
+	 			pset(cam.x+68+i,cam.y+67+j,circuit:where_am_i(c,i,j))
+	 		end
+		end 
+		
+		print("a:"..c.angle.." s:"..c.speed,cam.x+2,cam.y+1,7)
+		print("x:"..c.x.." y:"..c.y,cam.x+2,cam.y+9,7)
+		print("cam.x "..cam.x..", cam.y "..cam.y,cam.x+2,cam.y+16,7)
+		print(c.cchkpnt.."-"..race.finish,cam.x+2,cam.y+30,7)	
+	 --print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)	
+	end	
 end
 
 -----------------
@@ -430,6 +485,13 @@ function circuit:init(m)
 	
  if(self.model==0)then
   self.x,self.y=0,32
+  self.width,self.heigh=24,16
+  self.realwidth,self.realheigh=960,640 -- realwidth = width* tile_width (5) * 8 pixels each
+  self.chkpnts=circuit0
+  self.startline=line_circuit0
+ end
+ if(self.model==1)then
+  self.x,self.y=24,32
   self.width,self.heigh=24,16
   self.realwidth,self.realheigh=960,640 -- realwidth = width* tile_width (5) * 8 pixels each
   self.chkpnts=circuit0
@@ -669,13 +731,13 @@ function particle_init(m,sx,sy,a,s)
 		duration=10,
 	}
 
- if(m==0)then -- spark
-  local da=(a+.5+(rnd(2)-1)/10)  
-  particle.x-=cos(a)*3
-  particle.dx=cos(da)*s
-  particle.y+=sin(a)*3
-  particle.dy=sin(da)*s
- elseif(m==1)then -- crash
+	if(m==0)then -- spark
+  		local da=(a+.5+(rnd(2)-1)/10)  
+  		particle.x-=cos(a)*3
+		particle.dx=cos(da)*s
+		particle.y+=sin(a)*3
+		particle.dy=sin(da)*s
+	elseif(m==1)then -- crash
   particle.x+=rnd(4)-2
   particle.y+=rnd(4)-2
   particle.dx=cos(da)*rnd(1)
@@ -693,37 +755,37 @@ function particle_init(m,sx,sy,a,s)
 end
 
 function particle_update(p)
- if(p.m==0)then -- spark
-	 local cc=rnd(2)
- 	if((cc>1.2)and(p.col!=5))then
-  	if(p.col==7)then p.col=10
-  	elseif(p.col==10)then p.col=9
-  	else p.col=5
-  	end
- 	end
- elseif(p.m==1)then -- crash
-	 p.dx+=rnd(1)-.5
-	 p.dy+=rnd(1)-.5
-	 p.rad+=.1
-	 if(p.rad>3) p.col=6
- elseif(p.m==2)then -- brake
-	 p.rad+=.1
-	 if(p.rad>3) p.col=6
+	if(p.m==0)then -- spark
+		local cc=rnd(2)
+ 		if((cc>1.2)and(p.col!=5))then
+  			if(p.col==7)then p.col=10
+  			elseif(p.col==10)then p.col=9
+  			else p.col=5
+  			end
+ 		end
+	elseif(p.m==1)then -- crash
+		p.dx+=rnd(1)-.5
+		p.dy+=rnd(1)-.5
+		p.rad+=.1
+		if(p.rad>3) p.col=6
+	elseif(p.m==2)then -- brake
+		p.rad+=.1
+		if(p.rad>3) p.col=6
 	end
 	
- p.x+=p.dx
- p.y-=p.dy	
- p.duration-=1
+	p.x+=p.dx
+	p.y-=p.dy	
+	p.duration-=1
 end
 
 function particle_draw(p)
- if(p.m==0)then -- spark
+	if(p.m==0)then -- spark
 		pset(p.x,p.y,p.col)
- elseif(p.m==1)then -- crash
-  circfill(p.x,p.y,p.rad,p.col)
- elseif(p.m==2)then -- brake
+	elseif(p.m==1)then -- crash
+		circfill(p.x,p.y,p.rad,p.col)
+	elseif(p.m==2)then -- brake
 		fillp(0b0011001111001100.1)
-  circfill(p.x,p.y,p.rad,p.col)
+  		circfill(p.x,p.y,p.rad,p.col)
 		fillp()
 	end
 	--print(p.m,50,30,7)
@@ -824,12 +886,14 @@ end
 player={
 	position=1, -- player position
 	car_stamina=100, -- damage
+	nokeys=true,
 	rival=5 -- index of the rival
 }
 
 LightDamage=.1
 MediumDamage=.2
 HardDamage=.4
+VHDamage=3
 
 function player:draw(x,y)
 	local xf=0
@@ -840,6 +904,30 @@ function player:draw(x,y)
 	elseif(self.car_stamina>0)then xf=5
 	end
 	rectfill(x,y,x+xf,y+6,7)
+end
+
+-->8
+-- race
+race={
+	start=false,
+	count=3,
+	finish=0,
+	chrono=0,
+}
+
+function race:countdown()
+	if(time()%2==0) self.count-=1
+
+	print(self.count,cam.x+59,cam.y+40,10)
+	print(self.count,cam.x+60,cam.y+39,10)
+	print(self.count,cam.x+61,cam.y+40,10)
+	print(self.count,cam.x+60,cam.y+41,10)
+	print(self.count,cam.x+60,cam.y+40,7)
+
+	if(self.count==0)then
+		self.start=true
+		self.chrono=time()
+	end
 end
 
 __gfx__
@@ -856,9 +944,9 @@ __gfx__
 880ee008880ee0081c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 88eeeee888eeeee89a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 88eeeee888eeeee82d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-880ee008880ee0080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06500650056005600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-05500000056000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+880ee008880ee0087000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0650065005600560b600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+05500000056000004c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -876,19 +964,19 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 dddddddddddddddddddddddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0032222800a222222222240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0010000922b000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00100000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0010eeeeeeeeeeee0000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0070e0000000000e0000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0010e0000000000e0322260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0010e0000000000e0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0010eeeeddddddde0522240000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00100000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00522280000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000098000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000009222222222222260000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000328000000032222222800000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0032222800a222222222240000109800000058000000980000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010000922b000000000010000100980000009800000098000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00100000000000000000010000100098000000100000001000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010eeeeeeeeeeee0000010000100009222222600000001000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0070e0000000000e0000010000100000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010e0000000000e0322260000700000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010e0000000000e0100000000100000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0010eeeeddddddde0522240000100000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000
+001000000000000000000100001000000000000000000ab000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00522280000000000000010000103222240000000000ab0000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000009800000000000001000010100005222222240ab00000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000922222222222226000052600000000000052b000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 eeeeee00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
