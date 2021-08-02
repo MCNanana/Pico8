@@ -164,9 +164,25 @@ end
 function car_update(c)
  if(c.player==true)then
 		car_player_update(c)
+		if(player.car_stamina<=0)then
+			for i=1,4 do
+				add(c.particles,add_particle(c.x+rnd(8)-4,c.y+rnd(8)-4,0,-.5,2,-.03,30,fire_colors))
+			end
+		elseif(player.car_stamina<10)then
+			for i=1,4 do
+				add(c.particles,add_particle(c.x+rnd(6)-3,c.y+rnd(6)-3,cos(c.angle+mid(.35,.65,rnd(.5)+.25))*.05,-sin(c.angle+mid(.35,.65,rnd(.5)+.25))*.05,1,.05,40,smoke_colors))
+			end
+		end
 	else
 		car_ia_update(c)
 	end
+
+	if((rnd(1)>.95)and(c.speed<.4))then
+		for i=1,4 do
+			add(c.particles,add_particle(c.x+rnd(4)-2,c.y+rnd(4)-2,cos(c.angle+mid(.35,.65,rnd(.5)+.25))*.1,-sin(c.angle+mid(.35,.65,rnd(.5)+.25))*.1,1,0,20,spark_colors))
+		end
+	end
+
 	-- ligne d'arrivee
 	if(c.lap==circuit.lap)and(c.cchkpnt==0)then
 		if(c.x>circuit.startline.x0)and
@@ -240,7 +256,7 @@ function car_player_update(c)
 	local speed=0
 	local sv=car_speed_variation(c) 
 	-- commands
-	if(c.crash==0)then
+	if(c.crash==0)and(player.car_stamina>0)then
 		if (btn(0))then -- turn left
 		 c.angle-=.01
 		elseif (btn(1))then -- turn right
@@ -248,13 +264,13 @@ function car_player_update(c)
 		end
 		-- speed
 		if(btn(4)and c.speed<=max_speed)then
-			player.nokeys=false
+			--player.nokeys=false
 			-- accell
 			if(sv==0) c.speed=min(max_speed,c.speed+acc)
 			c.speed-=sv
 			if(c.speed<rear) c.speed=rear
 		elseif btn(5)then
-			player.nokeys=false
+			--player.nokeys=false
 			-- brake
 			if(c.speed>brk)then
 				c.speed-=(brk+sv)
@@ -264,17 +280,24 @@ function car_player_update(c)
 				c.speed=-rear
 			end
 		else
-			-- nokeys
-			player.nokeys=true	
-			if(c.speed>nth)then
-				c.speed=max(0,c.speed-(nth+sv))
-			else
-				c.speed=0
-			end
+			player.nokeys=true
 		end
-		-- other
-		if (btn(2)) c.x,c.y=64,80
+	else
+		player.nokeys=true
 	end
+
+	if(player.nokeys)then
+		-- nokeys
+		if(c.speed>nth)then
+			c.speed=max(0,c.speed-(nth+sv))
+		else
+			c.speed=0
+		end
+		player.nokeys=false
+	end
+
+	-- other
+	if (btn(2)) c.x,c.y=64,80
 	
 	-- circuit bounds
 	if((c.x<=0)or(c.x>=circuit.realwidth))
@@ -301,47 +324,14 @@ function car_player_update(c)
 	c.x+=cos(c.angle)*c.speed
 	c.y-=sin(c.angle)*c.speed
 
-	-- crash
-	--[[if(crash==true)then
-		c.crash=true
-		crash=false
-		make_crash()
-	end
-	if(c.crash==true)then
-		if(c.speed<.1)then
-		 c.speed=0
-		 c.crash=false
-		else
-		 c.rotation+=.08
-			c.speed-=.2
-		end	
-	else
-		c.rotation=c.angle
-	end]]
-	-- FX
-	--if(btn(4) and(time()%2==0))then
-		--c.sparking=true
-		--make_sparks()
-	if(btn(3))then
-		add(c.particles,add_particle(c.x,c.y,cos(c.angle+mid(.4,.6,rnd(.5)+.2))*.5,-sin(c.angle+mid(.4,.6,rnd(.5)+.2))*.5,1,50,spark_colors))
-		add(c.particles,add_particle(c.x,c.y,cos(c.angle+mid(.4,.6,rnd(.5)+.2))*.5,-sin(c.angle+mid(.4,.6,rnd(.5)+.2))*.5,1,50,spark_colors))
-		add(c.particles,add_particle(c.x,c.y,cos(c.angle+mid(.4,.6,rnd(.5)+.2))*.5,-sin(c.angle+mid(.4,.6,rnd(.5)+.2))*.5,1,50,spark_colors))
-	end
-	--make_brakesmoke()
-	--if(c.sparking==true)then
-	--	c.sparking=false
-	--end
 	update_particles()
-	--[[foreach(c.part,particle_update) 
- 	
-	for p in all(c.part) do
- 		if(p.duration==0) del(c.part,p)
- 	end]]
  
 	-- Damage
-	if(sv==sv1)then player.car_stamina-=LightDamage
-	elseif(sv==sv2)then player.car_stamina-=MediumDamage
-	elseif(sv==sv3)then player.car_stamina-=HardDamage
+	if(player.car_stamina>0)then
+		if(sv==sv1)then player.car_stamina-=LightDamage
+		elseif(sv==sv2)then player.car_stamina-=MediumDamage
+		elseif(sv==sv3)then player.car_stamina-=HardDamage
+		end
 	end
 	-- Position
 	if(c.finish==0)then
@@ -394,11 +384,6 @@ function car_collision()
 			end
 		end
 	end
-
-	--[[for c in all(cars) do
-		if(c.collision) c.angle=rnd(1) --and(c.speed>1)then c.speed=c.speed/2
-		c.collision=false
-	end]]
 end
 
 function car_speed_variation(c)
@@ -452,35 +437,6 @@ function car_debug(c)
 	 --print("cel "..c.celx.."-"..c.cely.."-fget "..tostr(fget(mget(c.celx,c.cely))),cam.x+2,cam.y+30,7)	
 	end	
 end
-
------------------
--- fx & events --
------------------
-function make_sparks()
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-	add(car.part,particle_init(0,car.x,car.y,car.angle,rnd(1)))		
-end
-
-function make_crash()
-	add(car.part,particle_init(1,car.x,car.y,0,0))		
-	add(car.part,particle_init(1,car.x,car.y,0,0))		
-	add(car.part,particle_init(1,car.x,car.y,0,0))		
-	add(car.part,particle_init(1,car.x,car.y,0,0))		
-	add(car.part,particle_init(1,car.x,car.y,0,0))		
-end
-
-function make_brakesmoke()
-	add(car.part,particle_init(2,car.x-2+cos(car.angle)*3,car.y+sin(car.angle)*4,0,0))		
-	add(car.part,particle_init(2,car.x+2+cos(car.angle)*3,car.y+sin(car.angle)*4,0,0))		
-	--add(car.part,particle_init(2,car.x-cos(car.angle)*3,car.y+sin(car.angle)*3,0,0))		
-	--add(car.part,particle_init(2,car.x-cos(car.angle)*3,car.y+sin(car.angle)*3,0,0))		
-end
-
 
 -->8
 -- circuit
@@ -740,15 +696,18 @@ end
 ---------------
 -- particles --
 ---------------
-spark_colors={1,6,7}
+spark_colors={7}
+smoke_colors={1,6,7}
+fire_colors={5,10,9,8}
 
-function add_particle(x,y,dx,dy,r,ttl,col_table)
+function add_particle(x,y,dx,dy,r,grow,ttl,col_table)
 	local particle={
 		x=x,
 		y=y,
 		dx=dx,
 		dy=dy,
 		r=r,
+		grow=grow,
 		t=ttl,
 		ttl=ttl,
 		col_table=col_table
@@ -761,13 +720,13 @@ function update_particles()
 	for p in all(cars[1].particles) do
 		p.x+=p.dx
 		p.y+=p.dy
-		p.r+=.1
+		p.r+=p.grow
 		if(p.t/p.ttl<1/#p.col_table)then
-  	p.c=p.col_table[1]
+  			p.c=p.col_table[1]
 		elseif(p.t/p.ttl<2/#p.col_table)then
-  	p.c=p.col_table[2]
+  			p.c=p.col_table[2]
 		elseif(p.t/p.ttl<3/#p.col_table)then
-  	p.c=p.col_table[3]
+  			p.c=p.col_table[3]
 		else
 			p.c=p.col_table[4]
 		end
@@ -778,84 +737,14 @@ end
 
 function draw_particles()
 	for p in all(cars[1].particles) do
-		if(p.r<=1)then pset(p.x,p.y,p.c)
+		if(p.r<=1)then 
+			pset(p.x,p.y,p.c)
 		else
-			fillp(0b0011001111001100.1)
+			fillp(0b1010010110100101.1)
 			circfill(p.x,p.y,p.r,p.c)
 			fillp()
 		end
 	end
-end
-
-
-function particle_init(m,sx,sy,a,s)
-	particle={
-		m=m,
-		x=sx,y=sy,
-		dx=0,dy=0,
-		col=7,
-		rad=1,
-		duration=10,
-	}
-
-	if(m==0)then -- spark
-  		local da=(a+.5+(rnd(2)-1)/10)  
-  		particle.x-=cos(a)*3
-		particle.dx=cos(da)*s
-		particle.y+=sin(a)*3
-		particle.dy=sin(da)*s
-	elseif(m==1)then -- crash
-  particle.x+=rnd(4)-2
-  particle.y+=rnd(4)-2
-  particle.dx=cos(da)*rnd(1)
-  particle.dy=sin(da)*rnd(1)
-  particle.rad=rnd(3)
- elseif(m==2)then -- brake
-  local da=(a+.5+(rnd(2)-1)/10)  
-  particle.x-=cos(a)*3
-  particle.dx=cos(da)*s
-  particle.y+=sin(a)*3
-  particle.dy=sin(da)*s
- end
- 
- return particle
-end
-
-function particle_update(p)
-	if(p.m==0)then -- spark
-		local cc=rnd(2)
- 		if((cc>1.2)and(p.col!=5))then
-  			if(p.col==7)then p.col=10
-  			elseif(p.col==10)then p.col=9
-  			else p.col=5
-  			end
- 		end
-	elseif(p.m==1)then -- crash
-		p.dx+=rnd(1)-.5
-		p.dy+=rnd(1)-.5
-		p.rad+=.1
-		if(p.rad>3) p.col=6
-	elseif(p.m==2)then -- brake
-		p.rad+=.1
-		if(p.rad>3) p.col=6
-	end
-	
-	p.x+=p.dx
-	p.y-=p.dy	
-	p.duration-=1
-end
-
-function particle_draw(p)
-	if(p.m==0)then -- spark
-		pset(p.x,p.y,p.col)
-	elseif(p.m==1)then -- crash
-		circfill(p.x,p.y,p.rad,p.col)
-	elseif(p.m==2)then -- brake
-		fillp(0b0011001111001100.1)
-  		circfill(p.x,p.y,p.rad,p.col)
-		fillp()
-	end
-	--print(p.m,50,30,7)
 end
 
 ---------------
