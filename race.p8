@@ -26,7 +26,7 @@ function _init()
 end
 
 function _update()
-	if(race.start)then
+	if(race.starttime>0)then
 		-- cars
 		for c in all(cars) do
 			car_update(c)
@@ -54,7 +54,7 @@ function _draw()
 	clip()
 	print_speed()
 
-	if(not race.start) race:countdown()
+	if(race.starttime==0) race:countdown()
 
 	if(debug)then
 		print("mem "..flr(stat(0)),cam.x+74,cam.y+1,7)
@@ -88,7 +88,9 @@ function print_speed()
 	print("dam: ",cam.x+42,cam.y+118,7)
 	player:draw(cam.x+60,cam.y+117)
 	print(player.car_stamina,cam.x+64,cam.y+118,0)
-	if(race.start) print("time: "..ceil(time()-race.chrono),cam.x+82,cam.y+109,7)
+	local chrono=ceil(time()-race.starttime)
+	if((race.starttime>0)and(car.finish>0)) chrono=race.chrono
+	print("time: "..chrono,cam.x+82,cam.y+109,7)
 
 	--print(race.rival, cars[race.rival].x,cars[race.rival].y-10,7)
 	if (race.rival) then
@@ -169,7 +171,7 @@ function car_update(c)
 			add(c.particles,add_particle(c.x+rnd(8)-4,c.y+rnd(8)-4,0,-.5,2,-.03,30,fire_colors))
 		elseif(player.car_stamina<15)then
 			--smoke
-			add(c.particles,add_particle(c.x+rnd(6)-3,c.y+rnd(6)-3,cos(c.angle+mid(.35,.65,rnd(.5)+.25))*.05,-sin(c.angle+mid(.35,.65,rnd(.5)+.25))*.05,1,.05,40,smoke_colors))
+			add(c.particles,add_particle(c.x+rnd(6)-3,c.y+rnd(6)-3,cos(c.angle+mid(.35,.65,rnd(.5)+.25)),-sin(c.angle+mid(.35,.65,rnd(.5)+.25)),1,.05,40,smoke_colors))
 		end
 	else
 		car_ia_update(c)
@@ -184,16 +186,15 @@ function car_update(c)
 	update_particles(c)
 
 	-- ligne d'arrivee
-	if(c.lap==circuit.lap)and(c.cchkpnt==0)then
-		if(c.x>circuit.startline.x0)and
-			(c.x<circuit.startline.x1)and
-			(c.y<=circuit.startline.y0)and
-			(c.y>circuit.startline.y0-max_speed)
-			then
-				race.finish+=1
-				c.finish=race.finish
-				if(c.player) player.position=race.finish
-		end
+	if(c.lap==circuit.lap)and(c.cchkpnt==0)and
+		(c.x>circuit.startline.x0)and
+		(c.x<circuit.startline.x1)and
+		(c.y<=circuit.startline.y0)and
+		(c.y>circuit.startline.y0-max_speed)
+		then
+			race.finish+=1
+			c.finish=race.finish
+			if(c.player) player.position=race.finish
 	end
 end
 
@@ -307,37 +308,41 @@ function car_player_update(c)
 		or(c.crash==1)then
 		c.angle=atan2(cos(c.angle),-sin(c.angle))
 	end
-	-- crash
-	if(c.crash>0)then 
-		c.speed=c.speed/2+1
-		c.crash=0
-		player.car_stamina-=VHDamage
+
+	-- Damage
+	if(c.finish==0)then
+		-- ground
+		if(player.car_stamina>0)and(c.speed>0)then
+			if(sv==sv1)then player.car_stamina-=LightDamage
+			elseif(sv==sv2)then player.car_stamina-=MediumDamage
+			elseif(sv==sv3)then player.car_stamina-=HardDamage
+			end
+		end
+		-- crash
+		if(c.crash>0)then 
+			c.speed=c.speed/2+1
+			c.crash=0
+			player.car_stamina-=VHDamage
+		end
+		-- collisions
+		if(c.collision)then 
+			c.speed=c.speed/2
+			c.collision=false
+			player.car_stamina-=VHDamage
+		end
 	end
-	-- collisions
-	if(c.collision)then 
-		c.speed=c.speed/2
-		c.collision=false
-		player.car_stamina-=VHDamage
-	end
-	
+
  	-- result
 	c.x+=cos(c.angle)*c.speed
 	c.y-=sin(c.angle)*c.speed
 
-	-- Damage
-	if(player.car_stamina>0)then
-		if(sv==sv1)then player.car_stamina-=LightDamage
-		elseif(sv==sv2)then player.car_stamina-=MediumDamage
-		elseif(sv==sv3)then player.car_stamina-=HardDamage
-		end
-	end
 	-- Position
 	if(c.finish==0)then
 		player.position=1
 		for i=2,#cars do
 			if(cars[i].lap>c.lap)then player.position+=1
 			elseif(cars[i].lap==c.lap)and(cars[i].cchkpnt>c.cchkpnt)then player.position+=1
-			elseif(cars[i].lap==c.lap)and(cars[i].cchkpnt==c.cchkpnt)and(cars[i].DistToChkpnt<=c.DistToChkpnt)then player.position+=1
+			elseif(cars[i].lap==c.lap)and(cars[i].cchkpnt==c.cchkpnt)and(cars[i].DistToChkpnt<c.DistToChkpnt)then player.position+=1
 			end
 		end
 	end
@@ -445,7 +450,7 @@ circuit={
 	realwifdth=0,realheigh=0, -- on screen - px
 	chkpnts,
 	startline,
-	lap=3 -- nb de tour de la course
+	lap=1 -- nb de tour de la course
 }
 	
 function circuit:init(m)
@@ -888,10 +893,11 @@ end
 -->8
 -- race
 race={
-	start=false,
 	count=1,
-	finish=0,
+	--rank=0,
 	chrono=0,
+	finish=0,
+	starttime=0,
 	rival=nil,
 }
 
@@ -905,8 +911,7 @@ function race:countdown()
 	print(self.count,cam.x+60,cam.y+40,7)
 
 	if(self.count==0)then
-		self.start=true
-		self.chrono=time()
+		self.starttime=time()
 	end
 end
 
