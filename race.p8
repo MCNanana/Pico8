@@ -1,6 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 34
 __lua__
+--bonjour
 -- const
 debug=true
 debug_car=true
@@ -294,6 +295,7 @@ function car_player_update(c)
 
 	-- other
 	if (btn(2)) c.x,c.y=64,80
+
 	
 	-- circuit bounds
 	if((c.x<=0)or(c.x>=circuit.realwidth)
