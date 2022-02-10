@@ -883,6 +883,7 @@ end
 -- game
 speechx=40
 speechy=50
+speechsize=10
 
 story={
 	-- sb:speech index before the event, 
@@ -899,22 +900,19 @@ speeches={
 	"hey, pretty good"
 }
 
-function speech(index,i,x,y,col)
-	local length=1+flr(t())
+function speech(index,x,y,col)
+	local length=flr(t()*5)
 	
-	--if(length>#speeches[index]) length=#speeches[index]
+	if(length>#speeches[index]) length=#speeches[index]
 
-	print(length,10,10,7)
-	print(#speeches[1],10,30,7)
-	print(sub(speeches[index],1,1+i),x,y,col)
+	for i=0,1+#speeches[index]/speechsize do
+ 	local endsize=min(length,(i+1)*speechsize)
+		print(sub(speeches[index],1+i*speechsize,endsize),x,y+i*10,col)
+	end
 end
 
 function drawinterlude(index)
-	print(t(),10,20,7)
-	for i=1,#speeches[index] do
-		speech(index,i,speechx,speechy,7)
-	
-	end
+	speech(index,speechx,speechy,7)
 end
 
 -->8
