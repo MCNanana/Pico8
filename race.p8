@@ -11,18 +11,7 @@ clipping=20 -- bordure du bas
 cars={}
 
 function _init()
-	circuit:init(2)
-
-	race.rival=2
-
-	add(cars,make_car(true,92,254,1,10,"moi",1))
-	add(cars,make_car(false,110,262,2,10,"Lewis",vstrong))
-	add(cars,make_car(false,92,270,3,10,"Georges",strong))
-	add(cars,make_car(false,110,278,4,10,"Daniel",normalp))
- add(cars,make_car(false,92,286,5,10,"Lance",normal))
-	add(cars,make_car(false,100,294,6,10,"Lance",normalm))
-	add(cars,make_car(false,92,302,7,10,"Lance",weak))
-	add(cars,make_car(false,100,310,8,10,"Lance",vweak))
+	_draw=drawinterlude
 end
 
 function _update()
@@ -57,6 +46,7 @@ function print_speed()
 	print("dam: ",cam.x+42,cam.y+118,7)
 	player:draw(cam.x+60,cam.y+117)
 	print(player.car_stamina,cam.x+64,cam.y+118,0)
+
 	local chrono=ceil(time()-race.starttime)
 	if((race.starttime>0)and(car.finish>0)) chrono=race.chrono
 	print("time: "..chrono,cam.x+82,cam.y+109,7)
@@ -881,6 +871,25 @@ function cam:draw()
 end
 -->8
 -- game
+game={
+	si=1, --story index
+	ss=1 --story sequence 1:sb, 2:race, 3:sa
+}
+
+function game:next()
+	local gsi=game.si
+	local gss=game.ss
+	
+	gss+=1
+	
+	if(gss==2)then
+		race:init(races[story[gsi].race])
+		_update=race:update()
+		_draw=race:draw()
+	end
+end	
+
+-- speech
 charx=10
 chary=20
 speechx=40
@@ -892,7 +901,7 @@ story={
 	-- c:circuit nb, r:rival nb, p: minimum finish place,
 	-- saok:speech after if ok, iaok: index of the next event if ok
 	-- sako:speech after if ko, iako: index of the next event if ko
-	{sb=1,c=0,r=0,p=5,saok=3,iaok=1,sako=2,iako=1}, -- begin
+	{sb=1,race=1,saok=3,iaok=1,sako=2,iako=1}, -- begin
 
 }
 
@@ -902,8 +911,23 @@ speeches={
 	"hey, pretty good"
 }
 
+function drawinterlude()
+	local index=1--game.si
+	
+	cls()
+	sspr(56,0,16,16,charx,chary)
+	sspr(40,0,16,16,charx+speechx+speechsize*4,chary,16,16,true,false)
+	if (speech(index,speechx,speechy,7))then
+		print("press a key",speechx,100,7)
+		if(btn(4)or btn(5))then
+			-- next race
+			game:next()
+		end
+	end
+end
+
 function speech(index,x,y,col)
-	local length=flr(t()*8)
+	local length=flr(t()*12)
 	local tlength=#speeches[index]/speechsize
 	local printed=false
 	
@@ -921,44 +945,46 @@ function speech(index,x,y,col)
 	return printed
 end
 
-function drawinterlude(index)
-	sspr(56,0,16,16,charx,chary)
-	sspr(40,0,16,16,charx+speechx+speechsize*4,chary,16,16,true,false)
-	if (speech(index,speechx,speechy,7))then
-		print("press a key",speechx,100,7)
-		if(btn())then
-			-- next race
-			
-		end
-	end
-end
+
 
 -->8
 -- race
-function make_a_race()
-	race={
-		circuit=1,
-		--rank=0,
-		chrono=0,
-		finish=0,
-		starttime=0,
-		rival=nil,
+races={
+	{c=2,r=nil,p=4,
+		o1={110,262,4,1,"basile",weak},
+		o2={92,270,8,2,"basile",weak},
+		o3={110,278,9,3,"basile",vweak},
+		o4={92,286,9,1,"basile",vweak},
+		o5={110,294,8,1,"basile",vweak},
+		o6={92,302,4,2,"basile",vweak},
+		o7={110,310,4,3,"basile",vweak}
 	}
-	return race
-end
+}
 
-function race:countdown()
-	if(time()%2==0) self.count-=1
+race={
+	circuit=c,--circuit number
+	rival=r,--rival number
+	place=p,--place
+	countd=5,
+	chrono=0,
+	finish=0,
+	starttime=0,
+}
 
-	print(self.count,cam.x+59,cam.y+40,10)
-	print(self.count,cam.x+60,cam.y+39,10)
-	print(self.count,cam.x+61,cam.y+40,10)
-	print(self.count,cam.x+60,cam.y+41,10)
-	print(self.count,cam.x+60,cam.y+40,7)
-
-	if(self.count==0)then
-		self.starttime=time()
-	end
+function race:init(r)
+	self.circuit=r.c
+	self.rival=r.r
+	self.place=r.p
+	
+	circuit:init(r.c)
+	add(cars,make_car(true,92,254,1,10,"moi",1))
+	add(cars,make_car(false,r.o1[1],r.o1[2],r.o1[3],r.o1[4],r.o1[5],r.o1[6]))
+	add(cars,make_car(false,92,270,3,10,"Georges",strong))
+	add(cars,make_car(false,110,278,4,10,"Daniel",normalp))
+ add(cars,make_car(false,92,286,5,10,"Lance",normal))
+	add(cars,make_car(false,100,294,6,10,"Lance",normalm))
+	add(cars,make_car(false,92,302,7,10,"Lance",weak))
+	add(cars,make_car(false,100,310,8,10,"Lance",vweak))
 end
 
 function race:update()
@@ -1002,6 +1028,26 @@ function race:draw()
 	 line(cam.x+63,cam.y+60,cam.x+63,cam.y+66,7)
 	end
 end
+
+function race:countdown()
+	if(t()%2==0) self.countd-=1
+
+	print(t(),cam.x+59,cam.y+20,10)
+
+	print(self.countd,cam.x+59,cam.y+40,10)
+	print(self.countd,cam.x+60,cam.y+39,10)
+	print(self.countd,cam.x+61,cam.y+40,10)
+	print(self.countd,cam.x+60,cam.y+41,10)
+	print(self.countd,cam.x+60,cam.y+40,7)
+
+	if(self.count==0)then
+		self.starttime=t()
+	end
+end
+
+---------------
+-- opponent --
+---------------
 __gfx__
 00000000e00ee00ee00ee00ee06ee06ee60ee60e0000777777770000000111111111100000000000000000000000000000000000000000000000000000000000
 00000000ff0ee00fff0ee00fff6ee06fff0ee60f0007777777777000001d11111111100000000000000000000000000000000000000000000000000000000000
