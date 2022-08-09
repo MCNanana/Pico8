@@ -1,15 +1,37 @@
 pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
+--[[
+c=cos;
+s=sin;
+t=5
+::_::
+t+=.01
+for i=0,990 do
+	x=rnd(127)
+	y=rnd(127)
+	p=x;o=y;w=80+10*s(t)
+	x+=s(o/w+t)*9
+	y+=c(p/w-t)*9
+	q=60+30*c(t/2)
+	v=mid(8,11.3+(s(x/q+t-x/q/2)*.7+s(t/4)*.3+c(y/q-t-y/q/2)*.7+c(t/4)*.3)*1.7,14)
+	fillp()
+	circ(p,o,2,v)
+	fillp(23130.5)
+	circ(p,o,2,v+.5)
+	end
+flip()
+goto _
+]]
 timer=0 -- timer
 debug=0
+--t=0
 level="title"
 -- score
 score=0
-missnb=0
-miss={}
-c_missclock=20
-c_draw_score=100
+cntwave={0,0}
+scrwave=0
+scrwavetimer=0
 
 camx,camy=0,0
 uborder=10
@@ -23,54 +45,34 @@ hero={} -- hero's ship
 -- flags
 gameover=false -- affiche le gameover
 boss=false -- vs boss ?
-boss_done_clock=0 -- when is the boss defeated ?
 starting=false -- print go
 warning=false -- print warning
 -- animation
 shaking={2,1,-3,-3,1,2}
 shakeindex=1
-fadeclock=0
-c_fade=40
 --palette
-opal    ={[0]=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}
+opal={[0]=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}
 enemypal={[0]=0,1,2,3,2,0,5,6,2,8,9,3,1,1,2,14}
-dpal=    {[0]=0,0,1,1,2,1,5,6,2,4,9,3,1,1,2,5}
+dpal=    {0,0,1,1,2,1,5,6,2,4,9,3,1,1,2,5}
 derpal={0,1,1,2,1,13,6,4,4,9,3,13,1,13,14}
 --starfield
 str={}
 strc={1,2,9,10}
 --rotation
---tr,scale,angle=0,1,1
-missiles={}
+tr,scale,angle=0,1,1
+
 ----------
 -- init --
 function _init()
 	make_hero()
- --_update=update_title
-	--_draw=draw_title
-	_update=update_game
-	_draw=draw_game
-	level="l1"
-	--evtindex=11
-	--timer=2450--1270--1999--800
-	--boss_done_clock=2450--;boss=true
+	_update=update_title
+	_draw=draw_title
+	--_update=update_game
+	--_draw=draw_game
+	--level="l1"
+	--evtindex=5
+	timer=0--1999--800
 	debug=1
-	--[[add(missiles,make_missile(20,20,0.5,1,1))
-	add(missiles,make_missile(30,40,0.5,1,1))
-	add(missiles,make_missile(40,60,0.5,1,1))
-	add(missiles,make_missile(50,80,0.5,1,1))
-	add(missiles,make_missile(60,100,0.5,1,3))
-]]
-	if(level=="title")then
-	 for i=0,100 do
-		 str[i]={}
-		 str[i].x=rnd(128)
-		 str[i].y=rnd(128)
-		 str[i].s=rnd(5)
-		 str[i].c=strc[flr(str[i].s)]
-		 str[i].s/=5
-	 end
- end
 end
 
 ------------
@@ -78,16 +80,15 @@ end
 function update_game()
 	if(debug==1)or(gameover==false)then
 	 timer+=1
-	 if(boss==false)score+=.1
+	 score+=.1
 	
-	 update_hero()
+	update_hero()
+	foreach(enemies,update_enemies)
 	
-	 foreach(enemies,update_enemies)
-	
-	 if(level=="il1")then	update_intro_lvl1()
-	 elseif(level=="l1")then update_lvl1()
-	 elseif(level=="l2")then update_lvl2()
-	 end
+	if(level=="il1")then	update_intro_lvl1()
+	elseif(level=="l1")then update_lvl1()
+	elseif(level=="l2")then update_lvl2()
+	end
 	
 	-- resolution tir
 	foreach(enemies,function(e)
@@ -124,63 +125,44 @@ function draw_game()
 	cls()
 	pal()
 	
-	-- niveau
-	if(level=="il1")then	draw_intro_lvl1()
-	elseif(level=="l1")then draw_lvl1()
-	elseif(level=="l2")then draw_lvl2()
-	end
-
-	-- hero
-	draw_hero()
-	--[[foreach(missiles,function(m)
-		if intersection(hero,m) then
-			gameover=true
+		-- niveau
+		if(level=="il1")then	draw_intro_lvl1()
+		elseif(level=="l1")then draw_lvl1()
+		elseif(level=="l2")then draw_lvl2()
 		end
-	end)
-	foreach(missiles,draw_missiles)
-	]]
-	-- ennemies
-	pal()
-	foreach(enemies,draw_enemies)	
-	-- explosions
-	pal()
-	foreach(expl,draw_expl)
-	-- border
-	rectfill(camx,0,camx+127,uborder,5)
-	--spr(75,camx,camy)
-	--spr(77,camx+120,camy)
-	rectfill(camx,128-bborder,camx+127,127,5)
-	-- printing
-	print("score "..flr(score),camx+4,camy+3,7)
-	print("missed "..missnb,camx+44,camy+3,7)
-	foreach(miss,function(m)
-		if(m.clock>0)then
-		 print("-10",camx+34,camy+1+c_missclock-m.clock)
-		 print("oh no!",camx+m.x,camy+m.y)
-   m.clock-=1
+		-- hero
+		draw_hero()
+		-- ennemies
+		pal()
+		foreach(enemies,draw_enemies)	
+ 	-- explosions
+		pal()
+ 	foreach(expl,draw_expl)
+		-- border
+		rectfill(camx,0,camx+127,uborder,5)
+		rectfill(camx,128-bborder,camx+127,127,5)
+		-- printing
+		print("score "..flr(score),camx+2,camy+3,7)
+		if(gameover)then print_swap("go",50,60)
   else
-   del(miss,m)
-  end 	
-	end)	
-	if(gameover)then print_swap("go",50,60)
- else
- 	if(starting)	print_swap("s",55,60)
- 	if(warning)	print_swap("w",45,60)
- 	if(boss_done_clock>0)and(timer-boss_done_clock>c_draw_score)then
- 	 draw_score()
+  	if(starting)	print_swap("s",55,60)
+  	if(warning)	print_swap("w",45,60)
+  --[[if(scrwavetimer>0)then
+   print_number(scrwave,80,40)
+   scrwavetimer-=1
+  end]]
   end 
- end 
-	if(boss==true)then
-	 print("boss ",camx+84,camy+3,7)
- 	draw_stamina(camx+104,camy+4,bosslife)
+		if(boss==true)then
+		 print("boss ",camx+70,camy+3,7)
+	 	draw_stamina(camx+90,camy+4,bosslife)
+		end
 	end
-
+	
 	-- debug
 	if(debug==1)then
 	 print("mem "..stat(0),camx+2,122,7)
 	 print("cpu "..stat(1),camx+80,122,7)
 		print(timer,2,13,7)
-		print(evtindex,2,25,7)
 		--print(bborder..", "..bborder-8,2,19)
 		--[[foreach(enemies,function(e)
 		 if(#e.missiles>0)then
@@ -189,52 +171,6 @@ function draw_game()
 		 end
 		end)]]
 		--print("hero.x "..hero.x.."- hero.y "..hero.y,2,25,7)
-	end
-end
-
----------------
---   score   --
----------------
-function manage_score(e)
- if(e.t==10)and(e.life==0)then
-  score+=100
- else
-  newmiss={}
-  newmiss.x=e.x+10
-  newmiss.y=e.y
-  newmiss.clock=c_missclock
-  add(miss,newmiss)
-  missnb+=1
-  score-=10
-  if(score<0) score=0
- end 
-end
-
-function	draw_score()
- if(btn(4)) fadeout()
-
-	local lvl
-	fillp(23130.5)
- rectfill(24,30,104,104,6)
- fillp()
- if(level=="l1")then
-  lvl="level 1"
- end
- print(lvl.." completed",29,49,0)
- print(lvl.." completed",30,50,7)
- print("score "..flr(score),39,69,0)
- print("score "..flr(score),40,70,7)
- print("aliens defeated "..(lvlenemynumber-missnb),29,79,0)
- print("aliens defeated "..(lvlenemynumber-missnb),30,80,7)
- spr(110,20,30)
- spr(111,101,30)
- spr(109,20,100)
- spr(125,101,100)
- sspr(112,56,8,4,28,30,73,4)
- sspr(112,56,8,4,28,104,73,4)
- sspr(120,56,4,8,20,38,4,62)
- sspr(120,56,4,8,105,38,4,62)
- sspr(112,60,8,4,28,110,73,4)
 end
 
 ---------------
@@ -251,36 +187,38 @@ function draw_starfield()
 		end)
 end
 
-----------------
---    title   --
-----------------
+---------------
+-- manage score
+function manage_score(e)
+	if(cntwave[1]!=e.wave)then
+	 cntwave[1]=e.wave
+	 cntwave[2]=e.wavenb
+	 cntwave[3]=1
+	 score+=scrwave
+	 scrwave=0
+	else
+	 scrwavetimer+=60
+	 cntwave[3]+=1
+	 scrwave+=flr(50*cntwave[3]/cntwave[2])
+	end
+end
+
+------------------
+--  screen --
+------------------
 function update_title()
  if(btn(4))then
-  --_update=update_intro_lvl1
-  --_draw=draw_intro_lvl1
-  --_update=update_game
-  --_draw=draw_game
-	 --level="l1"--"il1"
-	 fadeclock=timer
-	 --timer=0
+  _update=update_game
+  _draw=draw_game
+	 level="l1"
+	 timer=0
 	end 
 end
 
---timerts=0
+timerts=0
 function draw_title()
- timer+=.6
- if(fadeclock>0)then
-  fadeout()
-  --_update=update_intro_lvl1
-  --_draw=draw_intro_lvl1
-  _update=update_game
-  _draw=draw_game
-	 level="l1"--"il1"
-	 timer=0
- else
-  cls()
- draw_starfield()
-	index=flr(timer%48)
+ cls()
+	index=flr(timerts%48)
 	for j=0,15 do
 		if(index+j>47)then c1=0;c2=0
 		else
@@ -290,44 +228,76 @@ function draw_title()
 		for i=0,39 do
 			c=sget(i,48+j)
 			if((c==7)and(c1!=0))then
-				pset(50+i,40+j,c1)
+				pset(40+i,40+j,c1)
 			elseif((c==8)and(c2!=0))then
-				pset(50+i,40+j,c2)
+				pset(40+i,40+j,c2)
 			end
   end
  end
+ timerts+=.6
+ --map(3,4,camx+40,camy+40,5,2)
 	print("made with love by mcnanana",camx+15,camy+80,6)
-	print("press a button",camx+40,camy+90,6) 	
+	print("press ❎",camx+40,camy+90,6) 
 end
+
+
+-- intro_lvl --
+function update_intro_lvl1()
+	if(t>160)then
+ 	hero.x+=8
+ 	if(t%4==0) add(explosions,make_expl(290-rnd(14),80-rnd(8),10+rnd(4)-3))
+ elseif(t>120)then
+  camx+=4
+  hero.x+=3.9
+ elseif(t>90)then
+  camx+=2
+  hero.x+=2
+	elseif(t>50)then
+  camx+=1
+  hero.x+=1
+	end
+end
+
+function draw_intro_lvl1()
+	if(((t%40)==0)or((t%44)==0))then
+	 pal(11,8)
+	 pal(7,8)
+	else
+		palt(11,true)
+		pal(7,5)
+	end
+	local offset
+	for i=0,38 do
+		offset=1+i*8
+		if((offset>camx)and(offset<camx+128))	spr(32,offset,80)
+	end
+	for i=0,10 do
+		spr(64,1+i*8,64)
+		spr(80,1+i*8,72)
+	end
+	if(camx+64>249) spr(33,313,80)
+ if(t>200) fadeout()
+	if(t>160) foreach(explosions,draw_expl)	
+	camera(camx,camy)
 end
 
 -----------
 -- tools --
------------
 function intersection(a,b)
-	return ((a.x+a.oswidth<b.x+b.oswidth+b.width)and 
-   (a.x+a.oswidth+a.width>b.x+b.oswidth)and
-   (a.y+a.osheight<b.y+b.osheight+b.height)and
-   (a.y+a.osheight+a.height>b.y+b.osheight))
-	--[[return ((a.x<b.x+b.width)and 
+	return ((a.x<b.x+b.width)and 
    (a.x+a.width>b.x)and
    (a.y<b.y+b.height)and
-   (a.height+a.y>b.y))]]
+   (a.height+a.y>b.y))
+	--[[return (abs(a.x-b.x)*2<(a.width+b.width))and
+        (abs(a.y-b.y)*2<(a.height+b.height));]]
 end
 
------------
--- camera --
-function shake_camera()
+function shake_screen()
 	camx+=shaking[shakeindex]
 	shakeindex+=1
 	camy+=shaking[shakeindex]
 	shakeindex+=1
 	if(shakeindex==7) shakeindex=1
-end
-
-function reset_camera()
- camx=0
- camy=0
 end
 
 function print_number(n,x,y)
@@ -361,23 +331,12 @@ function print_swap(t,x,y)
  --map(5,1,45,60,5,1)
 end
 
-function fadein()
-	for i=0,15 do
-		pal(i,opal[i],1)
-	end
-end
-
 function fadeout()
- for i=1,c_fade do
-  for j=1,15 do
-   col=j
-   for k=1,(i/4+(j%2))do
-    col=dpal[col]
-   end
-   pal(j,col,1)
-  end
-  flip()
- end
+	for i=1,15 do
+		palarray[i]-=1
+		if(palarray[i]<0) palarray[i]=0
+		pal(i,palarray[i],1)
+	end
 end
 
 function sprite_zoom(x,y,scale,pixoffsetx,pixoffsety,sizex,sizey)
@@ -454,23 +413,21 @@ end
 ------------------------------
 evtlevel1={
 										1,-- init
-										100,280,460,640,-- wave4
-										960,-- expl(6)
+										100,300,500,700,-- wave4
+										1000,-- expl(6)
 										1280, -- wave5
-										1480, -- wave6()
-										1910, -- wave7
-										2240 --(10)
+										1350, -- wave6
+										1700, -- wave7
+										2000 --(10)
 										}
 evtindex=1
-c_evtexpl=6	
-c_evtboss=10
-lvlenemynumber=0
+evtexpl=6 --1000	
+evtboss=10--2000
 									
 -- level 1 --
 function init_lvl1(step)
 	if(step==1)then -- init
 	 starting=true
-	 lvlenemynumber=28
 		background={
 								-- clouds
 								{x=11,y=60,velx=0.6,t=0},
@@ -495,39 +452,43 @@ function init_lvl1(step)
 							}					
 	elseif(step==2)then -- wave 1
 		starting=false
-		add(enemies,make_enemies(1,128,70))
+		--add(enemies,make_enemies(3,128,70,1,1))
+		add(enemies,make_enemies(1,128,70,1,1))
 	elseif(step==3)then -- wave 2
-		add(enemies,make_enemies(1,127,40))
-		add(enemies,make_enemies(1,140,50))
-		add(enemies,make_enemies(1,153,30))
+		add(enemies,make_enemies(1,127,30,2,3))
+		add(enemies,make_enemies(1,140,40,2,3))
+		add(enemies,make_enemies(1,153,20,2,3))
 	elseif(step==4)then -- wave 3
-		add(enemies,make_enemies(1,127,90))
-		add(enemies,make_enemies(1,140,100))
-		add(enemies,make_enemies(1,153,80))
+		add(enemies,make_enemies(1,127,90,3,3))
+		add(enemies,make_enemies(1,140,100,3,3))
+		add(enemies,make_enemies(1,153,80,3,3))
 	elseif(step==5)then -- wave 4
-		add(enemies,make_enemies(1,127,65))
-		add(enemies,make_enemies(1,140,95))
-		add(enemies,make_enemies(1,153,35))
+		add(enemies,make_enemies(1,127,65,4,3))
+		add(enemies,make_enemies(1,140,95,4,3))
+		add(enemies,make_enemies(1,153,12,4,3))
 	elseif(step==7)then -- wave 5
-		add(enemies,make_enemies(1,130,50))
-		add(enemies,make_enemies(1,142,30))
-		add(enemies,make_enemies(1,154,45))
-		add(enemies,make_enemies(1,166,60))
-		add(enemies,make_enemies(1,178,75))
-		add(enemies,make_enemies(1,190,90))
-		add(enemies,make_enemies(1,202,110))
+		add(enemies,make_enemies(3,130,40,5,2))
+		add(enemies,make_enemies(1,128,80,5,2))
+		--[[add(enemies,make_enemies(1,127,34,5,7))
+		add(enemies,make_enemies(1,137,64,5,7))
+		add(enemies,make_enemies(1,147,94,5,7))
+		add(enemies,make_enemies(1,157,80,5,7))
+		add(enemies,make_enemies(1,167,70,5,7))
+		add(enemies,make_enemies(1,177,85,5,7))
+		add(enemies,make_enemies(1,187,105,5,7))]]
 	elseif(step==8)then -- wave 6
- 	add(enemies,make_enemies(2,100,40))
- 	add(enemies,make_enemies(2,120,40))
- 	add(enemies,make_enemies(2,140,40))
- 	add(enemies,make_enemies(2,160,40))
- 	add(enemies,make_enemies(2,180,40))
- 	add(enemies,make_enemies(2,200,40))
+ 	add(enemies,make_enemies(2,100,40,6,6))
+ 	add(enemies,make_enemies(2,120,40,6,6))
+ 	add(enemies,make_enemies(2,140,40,6,6))
+ 	add(enemies,make_enemies(2,160,40,6,6))
+ 	add(enemies,make_enemies(2,180,40,6,6))
+ 	add(enemies,make_enemies(2,200,40,6,6))
 	elseif(step==9)then -- wave 7
-		add(enemies,make_enemies(3,148,70))
-		add(enemies,make_enemies(1,130,60))
-		add(enemies,make_enemies(1,130,75))
-		add(enemies,make_enemies(1,130,90))
+		add(enemies,make_enemies(3,130,25,5,2))
+		add(enemies,make_enemies(3,130,105,5,2))
+		add(enemies,make_enemies(1,132,60,5,2))
+		add(enemies,make_enemies(1,132,80,5,2))
+		add(enemies,make_enemies(1,132,100,5,2))
 	elseif(step==10)then
  	-- boss buildings
 		add(background,{x=160,y=106,velx=2.2,t=10})
@@ -544,21 +505,15 @@ function update_lvl1()
 	if(timer==evtlevel1[evtindex])then 
 		init_lvl1(evtindex)
 		evtindex+=1
-	elseif(timer==evtlevel1[c_evtexpl]+190)then
+	elseif(timer==evtlevel1[evtexpl]+190)then
 	 foreach(background,function(b)
-   if(b.t==4)then
-    b.t=5
-    reset_camera()
-   end	
+   if(b.t==4) b.t=5	
    if(b.t==6) del(background,b)	 
 	 end)	
-	elseif(timer>evtlevel1[9]-100)then
-	 foreach(enemies,function(e)
-	  if((e.t==2)and(e.y<50))then
-	   e.animation=2
-    e.status=1	 
-   end	 
-	 end)
+	elseif(timer==1700)then 
+		init_lvl1(9)
+ elseif(timer==2000)then 
+		init_lvl1(10)
 	end
 
 	foreach(background,function(b)
@@ -619,57 +574,51 @@ end
 function draw_lvl1()
 	cls(1)
 	pal()
-	--
-	fillp(0b1111000011110000.1)
-	rectfill(0,90,127,127,12)
-	fillp()
  -- starship animation
  if(ss!=nil)then
-  if(timer<evtlevel1[c_evtexpl]+200)then
-   if(timer<evtlevel1[c_evtexpl])then
-    ss[1]=100+(timer/100)
-	   ss[2]=86
-	   ss[3]=0
-	   ss[4]=flr(cos(timer/150)*2)
-	  else -- leave
-	   ss[3]+=.5
-	   ss[4]+=.2
-	  end 
-	  -- draw ss
-	  spr(11,ss[1]-8,ss[2]+ss[4])
+ if(timer<evtlevel1[evtexpl]+200)then
+  if(timer<evtlevel1[evtexpl])then
+   ss[1]=100+(timer/100)
+	  ss[2]=86
+	  ss[3]=0
+	  ss[4]=flr(cos(timer/150)*2)
+	 else -- geting out
+	  ss[3]+=.5
+	  ss[4]+=.2
+	 end -- draw ss
+	 spr(11,ss[1]-8,ss[2]+ss[4])
 		 if(timer%10<5)pal(9,10)
- 	 spr(12,ss[1],ss[2]+ss[4])
-		 pal()
-	 end	
-  if(timer<evtlevel1[c_evtexpl])then
-	 -- launching ships	
-		 if(timer%110==1)then
-	 	 rad=3
-	 	 ss[5]=0
-	 	 ss[6]=ss[4]+2
-		 end
-		 sspr(88,8,2,3,ss[1]+ss[5],ss[2]+ss[6]+4)
-		 fillp(0b0101101001011010.1)
-		 circfill(ss[1]+ss[5],ss[2]+ss[6]+4,rad,6)
-		 fillp()
-	  ss[5]+=.3;ss[6]+=.1;rad-=.1
-	 elseif(timer==evtlevel1[c_evtexpl])then
-	  rad=6;ss[5]=-6;ss[6]=ss[4]-5
-	 elseif(timer<evtlevel1[c_evtexpl]+95)then
-	  -- missile
-	  fillp(0b0101101001011010.1)
-	  if(timer%20>10) pal(6,7)
-	  circfill(ss[1]+ss[5]+4,ss[2]+ss[6]+8,rad,6)
-	  fillp()
-	  if(timer%20<10) pal(14,15)
-	  sprite_zoom(ss[1]+ss[5],ss[2]+ss[6]+4,(timer-evtlevel1[c_evtexpl])/40,88,12,4,4)
-   --sspr(88,12,4,4,x+xvanim,y+yvanim+4)
-	  pal()
-	  fillp(0b0101101001011010.1)
-	  circfill(ss[1],ss[2]+4,rad,6)
-	  fillp()
-	  ss[5]-=.3;ss[6]-=.4;rad-=.04
-	 end
+ 	spr(12,ss[1],ss[2]+ss[4])
+		pal()
+	end	
+ if(timer<evtlevel1[evtexpl])then
+	-- launching ships	
+		if(timer%120==1)then
+	 	rad=3
+	 	ss[5]=0
+	 	ss[6]=ss[4]+2
+		end
+		sspr(88,8,2,3,ss[1]+ss[5],ss[2]+ss[6]+4)
+		fillp(0b0101101001011010.1)
+		circfill(ss[1]+ss[5],ss[2]+ss[6]+4,rad,6)
+		fillp()
+	 ss[5]+=.3;ss[6]+=.1;rad-=.1
+	elseif(timer==evtlevel1[evtexpl])then
+	 rad=6;ss[5]=-6;ss[6]=ss[4]-5
+	elseif(timer<evtlevel1[evtexpl]+95)then
+	 fillp(0b0101101001011010.1)
+	 if(timer%20>10) pal(6,7)
+	 circfill(ss[1]+ss[5]+4,ss[2]+ss[6]+8,rad,6)
+	 fillp()
+	 if(timer%20<10) pal(14,15)
+	 sprite_zoom(ss[1]+ss[5],ss[2]+ss[6]+4,(timer-evtlevel1[evtexpl])/40,88,12,2,3)
+  --sspr(88,12,4,4,x+xvanim,y+yvanim+4)
+	 pal()
+	 fillp(0b0101101001011010.1)
+	 circfill(ss[1],ss[2]+4,rad,6)
+	 fillp()
+	 ss[5]-=.3;ss[6]-=.4;rad-=.05
+	end
 	end
 	-- background
 	foreach(background,function(b)
@@ -690,70 +639,21 @@ function draw_lvl1()
 		end
 	end)
 	--scripts
-	if((timer>(evtlevel1[c_evtexpl]+95))
-		and(timer<evtlevel1[c_evtexpl]+220))then
-		if(timer%5==0)then
-			pal(7,10)
-			shake_camera()
-		end	
+	if((timer>(evtlevel1[evtexpl]+95))
+		and(timer<evtlevel1[evtexpl]+220))then
+		if(timer%5==0) pal(7,10)
 		circfill(60,80,timer-860,7)
 		make_expl(10+rnd(110),30+rnd(80))
 		pal()
-	elseif((timer>evtlevel1[c_evtboss])and(timer<evtlevel1[c_evtboss]+100))then
+		shake_screen()
+	elseif((timer>evtlevel1[evtboss])and(timer<evtlevel1[evtboss]+100))then
 		--boss
 		warning=true
-	elseif(timer>evtlevel1[c_evtboss]+100)then
+	elseif(timer>evtlevel1[evtboss]+100)then
 	 warning=false
 	end
 end
 
--- intro_lvl --
-function update_intro_lvl1()
-	timer+=1
-	
-	if(timer<30)then
-	 hero.x=10
-	else
-	 camx+=1
-	end
-	hero.y=44
-	camera(camx,camy)
-	--[[			if(b.x<-23) b.x=127
-
-	if(t>160)then
- 	hero.x+=8
- 	if(t%4==0) add(explosions,make_expl(290-rnd(14),80-rnd(8),10+rnd(4)-3))
- elseif(t>120)then
-  camx+=4
-  hero.x+=3.9
- elseif(t>90)then
-  camx+=2
-  hero.x+=2
-	elseif(t>50)then
-  camx+=1
-  hero.x+=1
-	end]]
-end
-
-function draw_intro_lvl1()
-	local x
-	cls()
-	print(camx,camx+50,20,7)
-	for i=0,136,8 do
-  if(i+8<camx%128)then
-  	x=i+(128*(flr(camx/128)+1))
-  else
-   x=i+(128*(flr(camx/128)))
-  end
-	 spr(32,x,50)
-	end
-	if(timer%30<10)then
-	 pal(11,3)
-	 pal(7,11)
-	else
-	 pal()
-	end 
-end
 
 -- level 2 --
 function init_lvl2()
@@ -791,7 +691,7 @@ end
 -- 2:cercle
 -- 3:homein
 -- 10:boss1
-function make_enemies(te,x,y)
+function make_enemies(te,x,y,w,wn)
 	enemy={}
 	enemy.t=te
 	enemy.x=x
@@ -799,15 +699,15 @@ function make_enemies(te,x,y)
 	enemy.xy=x
 	enemy.width=7
 	enemy.height=8
-	enemy.oswidth=0
-	enemy.osheight=0
 	enemy.missiles={}
 	enemy.animation=1 -- anim ou jeu
 	enemy.anim_begin=0 -- debut d'anim
 	enemy.status=1 -- jouable
-	enemy.shoot=0 -- a virer !!!! 
+	enemy.shoot=0 
 	enemy.hit=0 -- is enemy hit ?
 	enemy.life=1 -- life
+	enemy.wave=w
+	enemy.wavenb=wn
 	if(te==1)then
 		enemy.sprite=8
 	elseif(te==2)then
@@ -839,35 +739,27 @@ function update_enemies(e)
 	 e.hit=0
 	end
 	
- if(e.x<-7)or(e.life<1)then
+ if(e.x<0)or(e.life<1)then
+	 --outside screen
+ 	e.status=0
+ 	--dead
  	if(e.life==0)then
-  	--dead
  		make_expl(e.x,e.y)
  		e.life-=1
- 		if(e.t==10)then
-	 		boss_done_clock=timer
- 	 	manage_score(e)
- 		end
- 	elseif(e.status==1)then
- 	 --outside screen
- 	 manage_score(e)
+ 		manage_score(e)
  	end	
- 	--clean
- 	e.status=0
  	if(#e.missiles==0) del(enemies,e)
  else
 		--shooting and moving
 		if(e.t==1)then 
 			e.x-=.6
-			e.y+=sin((e.x*.5+timer)/80)*.3--*cos(t/100)
+			e.y+=sin((e.x+timer)/100)*.3--*cos(t/100)
 			if((e.x<127)and(timer%80==0))then
 				e.shoot=1
 				add(e.missiles,make_missile(e.x-7,e.y+2,0.5,1,1))
 			end
 		elseif(e.t==2)then
-			if(e.animation==2)then
-			 e.x-=1
-			elseif(e.animation==1)then
+			if(e.animation==1)then
 			 e.x-=1
 			 if(e.x<64)then
 			  e.animation=0
@@ -877,16 +769,14 @@ function update_enemies(e)
 				if(e.y<50)then e.status=1
 				else e.status=0
 				end
- 			e.x=64+cos((52+timer-e.anim_begin)/200)*48
-	  	e.y=64+sin((52+timer-e.anim_begin)/200)*24 
+				--e.x=64+cos((timer-e.anim_begin)/200)*48
+	 		--e.y=64+sin((timer-e.anim_begin)/200)*24 
 	 	end	
 		elseif(e.t==3)then
 			e.x-=.6
-			if((e.x>5)and(e.x<124)and(#e.missiles==0))then
+			if((e.x<124)and(#e.missiles==0))then
 				e.shoot=1
 				add(e.missiles,make_missile(e.x-7,e.y+2,0.5,2,2))
-			else
-			 e.shoot=0
 			end
 		elseif(e.t==10)then
 		 -- boss1
@@ -916,10 +806,13 @@ function update_enemies(e)
 end
 
 function draw_enemies(e)
-	if((boss==true)and((shakeindex>1)or(e.hit==1)))	shake_camera()
+	if((boss==true)and((shakeindex>1)or(e.hit==1)))	shake_screen()
 	
 	if(e.life>0)then
 		if((e.t==2)and(e.animation==0))then
+			print((timer-e.anim_begin),40,40,7)
+ 		e.x=64+cos((52+timer-e.anim_begin)/200)*48
+	  e.y=64+sin((52+timer-e.anim_begin)/200)*24 
 			local col=0
 			local ey=e.y/40
 			if(e.status==0)then
@@ -941,16 +834,12 @@ function draw_enemies(e)
 		else
 			-- affichage standard
 			spr(e.sprite,camx+e.x,camy+e.y)
-   if(e.t==3)then
-			 print(e.x,40,40,7)
-			 print(e.shoot,40,60,7)
-   end
-			--[[if(e.shoot>0)then
+			if(e.shoot>0)then
 			 circfill(e.x+1,e.y+5,1-e.shoot,2)
 			 circfill(e.x+3,e.y+6,2-e.shoot,14)
 			 circfill(e.x+5,e.y+4,1-e.shoot,2)
 			 e.shoot-=.1
-			end]]
+			end
 		end
 	end
 	
@@ -1024,52 +913,28 @@ end
 -- 1:basique
 -- 2:homein
 -- 3:manic
-c_m_animate=10
-c_p_color={2,14,15}
-c_p_h_color={9,10,7}
-
 function make_missile(x,y,a,s,t)
 	m={}
-	m.x=x;m.y=y
-	m.sx=x;m.sy=y -- for hero
+	m.x=x;m.sx=x
+	m.y=y;m.sy=y
 	m.angle=a
 	m.speed=s
-	m.width=6
-	m.oswidth=1
+	m.width=8
 	if(t==3)then
-		m.height=6
-		m.osheight=1
+		m.height=8
 	else
 		m.height=4
-		m.osheight=2
 	end	
 	m.t=t
-	m.clock=timer -- for homein
+	m.it=timer
 	m.status=1
-	if(m.t==0)then
- 	m.animate={x=m.x,y=m.y+m.height/2,r=2,c=0}
-	 sfx(0)
-	else
- 	m.animate={x=m.x+m.width,y=m.y+m.height/2,r=2,c=0}
-	end
+	if(m.t==0) sfx(0)
 	return m
 end
 
 function update_missiles(m)
- if((timer<m.clock+c_m_animate)and(timer%2==0))then
-  m.animate.x+=rnd(2)-1
-  m.animate.y+=rnd(2)-1
-  m.animate.r-=.2
-  if(m.t==0)then
-  	m.animate.c=c_p_h_color[flr(rnd(3)+1)]  
-  else
-  	m.animate.c=c_p_color[flr(rnd(3)+1)]
-  end
- end
- 
 	if(m.t==0)then
 		m.x+=3
-		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
 		if((m.x>126)or(m.x-m.sx>80)) del(hero.missiles,m)
 	elseif(m.t==1)then
 		if(m.x<0)then
@@ -1079,7 +944,7 @@ function update_missiles(m)
 		--m.y+=sin(m.angle)
 		end
 	elseif(m.t==2)then -- homein
-	 if(timer-m.clock>200)then 
+	 if(timer-m.it>200)then 
 	  m.status=0 --del
 	 else
 			local vecx=cos(m.angle)
@@ -1109,18 +974,17 @@ function draw_missiles(m)
 		spr(5,camx+m.x,camy+m.y)
 	elseif(m.t==2)then
 		draw_rotation(m.x,m.y,m.angle,48,8)
+	 print(m.x..", "..m.angle,2,25,7)
+		--[[circfill(m.x,m.y,4,2)
+		circfill(m.x,m.y,3,14)
+		if (timer%5<3) pal(15,14)
+		circfill(m.x,m.y,2,15)
+		pal()
+		line(m.x+4*cos(m.angle),m.y+4*sin(m.angle),
+		m.x,m.y,8)]]
 	elseif(m.t==3)then
 	 spr(36,camx+m.x,camy+m.y)
 	end	
-	
- if(timer<m.clock+c_m_animate) circ(m.animate.x,m.animate.y,m.animate.r,m.animate.c)
-	--[[foreach(m.animate,function(a)
-	 if(timer<a.clock+c_p_animate)then
-	  circ(a.x,a.y,a.r,a.c)
-	 else
-	  del(m.animate,a)
-	 end 
-	end)]]
 end
 
 -->8
@@ -1130,9 +994,7 @@ function make_hero()
 	hero.x=20
 	hero.y=74
 	hero.width=8
-	hero.height=6
-	hero.oswidth=0
-	hero.osheight=1
+	hero.height=7
 	--hero.i=false
  hero.shoot=0
  hero.missiles={}
@@ -1227,14 +1089,14 @@ __gfx__
 9a7777a9009aa90000000000000000002ee77ee2000000000000000002bb32000000000000000000eeeeeeee0000000000000000000000000000000000000000
 09aaaa9000099000000000000000000002eeee20000000000000000002bf32000000000000000000eeeeeeee0000000000000000000000000000000000000000
 009999000000000000000000000000000022220000000000000000000b2223000000000000000000000000000000000000000000000000000000000000000000
-70007000707777077770770707770770700777078880888080808880008808080888088870007770077000070000555555555555555500000000000000000000
-00078707878888788887887878887887877888708000808088808000080808080800080807078887788700700055cc6666666666666655000000000000000000
-0007877787877878778787887787787887877700808080808080880008080808088008880078777787787000056c7000000000000007c6500000000000000000
-000787878788887888878778778778778787887080808880808080000808080808000880777878878778777067c700000000000000007c760000000000000000
-00078787878778787877877877877877878778708880808080808880088000800888080800787787877870075666000000000000000066650000000000000000
-07007808778078787787877878887877877887000800800000800080080000000008000800078887788707000555600000000000000655500000000000000000
-78700707007007070070700707770700700770070800800000800000000000000008000007007770077000700055555555555555555555000000000000000000
-07000000000000000000000000000000000000700000800008880080000000000000000870000000000000070000555555555555555500000000000000000000
+70007000707777077770770707770770700777078880888080808880008808080888088870007770077000070000000000000000000000000000000000000000
+00078707878888788887887878887887877888708000808088808000080808080800080807078887788700700000000000000000000000000000000000000000
+00078777878778787787878877877878878777008080808080808800080808080880088800787777877870000000000000000000000000000000000000000000
+00078787878888788887877877877877878788708080888080808000080808080800088077787887877877700000000000000000000000000000000000000000
+00078787878778787877877877877877878778708880808080808880088000800888080800787787877870070000000000000000000000000000000000000000
+07007808778078787787877878887877877887000800800000800080080000000008000800078887788707000000000000000000000000000000000000000000
+78700707007007070070700707770700700770070800800000800000000000000008000007007770077000700000000000000000000000000000000000000000
+07000000000000000000000000000000000000700000800008880080000000000000000870000000000000070000000000000000000000000000000000000000
 0000000012489999999999a77a999999999984210000000000666600000660000666660006666600060006600666666069999990999999906999996069999960
 00000000000000000000000000000000000000000000000006999960006996006999996069999960696069966999999699600000000069909960699099606990
 00000000228888888888eeeffeee88888888882200000000699669966999960006666996066669966960699669966660aaaaaa700007aa707aaaaa707aaaaaa0
@@ -1243,22 +1105,22 @@ __gfx__
 00000000000000000000000000000000000000000000000006999960699999960699999669999960000069966999999600000000000000000000000000000000
 00000000882222333bbbbbbaabbbbbb3332222880000000000666600066666600066666006666600000006600666666000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-70000000000077707007070007070070777000800000000000000000000000000000000000000000000000000000000000000000566700006777777777777000
-07000080000788878778787078787787888700000000000000000000000000000000000000000000000000000000000000000000566700005dc6666666667700
-007008800078777787787887887877878778700700000000000000000000000000000000000000000000000000000000000000005667000051d6666666666770
-00008080000788778888787878787787877870700000000000000000000000000000000000000000000000000000000000000000566670005666555555566677
-00008080000077878778787778787787888700000000000000000000000000000000000000000000000000000000000000000000556667775667000000056667
-00080080000777878778787078787787877000000000000000000000000000000000000000000000000000000000000000000000055666665667000000005667
-00808880007888778778787078078877870077770000000000000000000000000000000000000000000000000000000000000000005566665667000000005667
-00000000000777007007070007007700700000000000000000000000000000000000000000000000000000000000000000000000000555555667000000005667
-77770888888888800888800888008008800000000088880000000000000000000000000000000000000000000000000000000000000056677777777756670000
-00000800000080008000800800808008007777700877778000000000000000000000000000000000000000000000000000000000000056676666666656670000
-00000088070080008000800800800808000000008787787800000000000000000000000000000000000000000000000000000000000056676666666656670000
-00777000800800080008008888000080770000088787787800000000000000000000000000000000000000000000000000000000000656675555555556670000
-77000000800807080008008080000080007770008777777800000000000000000000000000000000000000000000000000000000777766670000000056670000
-00008888000800088880008008888800000007778877878800000000000000000000000000000000000000000000000000000000666666700000000056670000
-00700000000000000000700000000000700000000877878000000000000000000000000000000000000000000000000000000000666666000000000056670000
-87000000000000000000000000000000077708000088880000000000000000000000000000000000000000000000000000000000555550000000000056670000
+07000000007770700707000707007077700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+78708000078887877878707878778788870000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07088000787777877878878878778787787000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00808000078877888878787878778787787000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00808000007787877878777878778788870000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+08008000077787877878707878778787700007870000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+80888000788877877878707807887787000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000070077700700707000700770070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00088888888800888800888008008000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00800000080008000800800808008000787000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00088000080008000800800800808000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000800800080008008888000080000000007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000800807080008008080000080000000007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+08888000800088880008008888800070000778770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000700000000000787000007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07000000000000000000000000000070000007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000665000000000000000000000000650000000006500000000000000055500000200000000000000000d1d1d1d1dcdcdcdc000000000000000000000000
 00000066665000000000000000065550066650000006666600655000000005555505002200000000000000001d1d1d1dcdcdcdcd000000000000000000000000
 0000066666650066000000000066666566666650000000000666650000000555555550250000000000000000d1d1d1d1dcdcdcdc000000000000000000000000
@@ -1432,13 +1294,4 @@ a8a91a60616263640000000000000000000000000000000000000000000000000000000000000000
 00000000000000009c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 000f00002434300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-010300001e650236502a65033650336502e650296502f650256501d65016650000000000018051000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000c0000153071c307173071230712307073070430703307013072500725007250073670700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-010e00200c0431a31324615000020c0430000024655000000c0430000000000000000c0430000000000000000c0430000000003000020c0430000000000000000c0430000024655246250c043000000000000000
+010300001e650236502a65033650336502e650296502f650256501d65016650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
